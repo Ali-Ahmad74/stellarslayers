@@ -234,6 +234,7 @@ export type Database = {
           our_score: number | null
           overs: number
           result: string | null
+          tournament_id: number | null
           venue: string | null
         }
         Insert: {
@@ -245,6 +246,7 @@ export type Database = {
           our_score?: number | null
           overs?: number
           result?: string | null
+          tournament_id?: number | null
           venue?: string | null
         }
         Update: {
@@ -256,9 +258,18 @@ export type Database = {
           our_score?: number | null
           overs?: number
           result?: string | null
+          tournament_id?: number | null
           venue?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       players: {
         Row: {
@@ -392,6 +403,42 @@ export type Database = {
           team_logo_url?: string | null
           team_name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tournaments: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          start_date: string | null
+          tournament_type: string | null
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: number
+          is_active?: boolean | null
+          name: string
+          start_date?: string | null
+          tournament_type?: string | null
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          start_date?: string | null
+          tournament_type?: string | null
+          venue?: string | null
         }
         Relationships: []
       }
