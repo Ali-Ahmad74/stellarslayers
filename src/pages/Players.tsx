@@ -8,10 +8,15 @@ import { Input } from '@/components/ui/input';
 import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { RoleBadge } from '@/components/RoleBadge';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
+import { useActiveSeries } from '@/hooks/useActiveSeries';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const Players = () => {
   const [search, setSearch] = useState('');
-  const { players, loading } = usePlayerRankings();
+  const { activeSeries } = useActiveSeries();
+  const [activeOnly, setActiveOnly] = useState(false);
+  const { players, loading } = usePlayerRankings(activeOnly ? activeSeries?.id : null);
 
   const filteredPlayers = players.filter((player) =>
     player.name.toLowerCase().includes(search.toLowerCase())
@@ -30,6 +35,18 @@ const Players = () => {
             <p className="text-muted-foreground mt-1">
               {filteredPlayers.length} players in the squad
             </p>
+            {activeSeries && (
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  variant={activeOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveOnly((v) => !v)}
+                >
+                  Active series only
+                </Button>
+                {activeOnly && <Badge variant="secondary">{activeSeries.name}</Badge>}
+              </div>
+            )}
           </div>
           
           <div className="relative max-w-sm w-full">

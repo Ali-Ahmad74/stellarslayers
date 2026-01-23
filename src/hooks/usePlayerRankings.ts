@@ -130,7 +130,7 @@ export function calculateICCPoints(stats: PlayerStats | null, scoring?: Partial<
   };
 }
 
-export function usePlayerRankings() {
+export function usePlayerRankings(seriesId?: number | null) {
   const [players, setPlayers] = useState<PlayerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,12 +150,173 @@ export function usePlayerRankings() {
 
       if (playersError) throw playersError;
 
-      // Fetch stats from the view
-      const { data: statsData, error: statsError } = await supabase
-        .from('player_stats')
-        .select('*');
+      let statsData: any[] = [];
 
-      if (statsError) throw statsError;
+      if (seriesId) {
+        const { data: matchRows, error: matchErr } = await supabase
+          .from('matches')
+          .select('id')
+          .eq('series_id', seriesId);
+        if (matchErr) throw matchErr;
+
+        const matchIds = (matchRows ?? []).map((m: any) => m.id).filter((x) => Number.isFinite(Number(x)));
+
+        if (matchIds.length === 0) {
+          statsData = [];
+        } else {
+          const [batRes, bowlRes, fieldRes] = await Promise.all([
+            supabase
+              .from('batting_inputs')
+              .select('player_id, runs, balls, fours, sixes, out, match_id')
+              .in('match_id', matchIds),
+            supabase
+              .from('bowling_inputs')
+              .select('player_id, balls, runs_conceded, wickets, maidens, wides, no_balls, fours_conceded, sixes_conceded, match_id')
+              .in('match_id', matchIds),
+            supabase
+              .from('fielding_inputs')
+              .select('player_id, catches, runouts, stumpings, dropped_catches, match_id')
+              .in('match_id', matchIds),
+          ]);
+
+          if (batRes.error) throw batRes.error;
+          if (bowlRes.error) throw bowlRes.error;
+          if (fieldRes.error) throw fieldRes.error;
+
+          type Mutable = {
+            player_id: number;
+            matches: number;
+            total_runs: number;
+            total_balls: number;
+            fours: number;
+            sixes: number;
+            times_out: number;
+            thirties: number;
+            fifties: number;
+            hundreds: number;
+            bowling_balls: number;
+            runs_conceded: number;
+            wickets: number;
+            maidens: number;
+            wides: number;
+            no_balls: number;
+            fours_conceded: number;
+            sixes_conceded: number;
+            three_fers: number;
+            five_fers: number;
+            catches: number;
+            runouts: number;
+            stumpings: number;
+            dropped_catches: number;
+          };
+
+          const byPlayer = new Map<number, Mutable>();
+          const byPlayerMatches = new Map<number, Set<number>>();
+
+          const ensure = (pid: number): Mutable => {
+            const existing = byPlayer.get(pid);
+            if (existing) return existing;
+            const init: Mutable = {
+              player_id: pid,
+              matches: 0,
+              total_runs: 0,
+              total_balls: 0,
+              fours: 0,
+              sixes: 0,
+              times_out: 0,
+              thirties: 0,
+              fifties: 0,
+              hundreds: 0,
+              bowling_balls: 0,
+              runs_conceded: 0,
+              wickets: 0,
+              maidens: 0,
+              wides: 0,
+              no_balls: 0,
+              fours_conceded: 0,
+              sixes_conceded: 0,
+              three_fers: 0,
+              five_fers: 0,
+              catches: 0,
+              runouts: 0,
+              stumpings: 0,
+              dropped_catches: 0,
+            };
+            byPlayer.set(pid, init);
+            return init;
+          };
+
+          const addMatch = (pid: number, mid: number) => {
+            if (!byPlayerMatches.has(pid)) byPlayerMatches.set(pid, new Set());
+            byPlayerMatches.get(pid)!.add(mid);
+          };
+
+          for (const row of (batRes.data as any[]) ?? []) {
+            const pid = Number(row.player_id);
+            const mid = Number(row.match_id);
+            if (!Number.isFinite(pid)) continue;
+            const s = ensure(pid);
+            s.total_runs += Number(row.runs ?? 0);
+            s.total_balls += Number(row.balls ?? 0);
+            s.fours += Number(row.fours ?? 0);
+            s.sixes += Number(row.sixes ?? 0);
+            if (row.out) s.times_out += 1;
+
+            const runs = Number(row.runs ?? 0);
+            if (runs >= 100) s.hundreds += 1;
+            else if (runs >= 50) s.fifties += 1;
+            else if (runs >= 30) s.thirties += 1;
+
+            if (Number.isFinite(mid)) addMatch(pid, mid);
+          }
+
+          for (const row of (bowlRes.data as any[]) ?? []) {
+            const pid = Number(row.player_id);
+            const mid = Number(row.match_id);
+            if (!Number.isFinite(pid)) continue;
+            const s = ensure(pid);
+            s.bowling_balls += Number(row.balls ?? 0);
+            s.runs_conceded += Number(row.runs_conceded ?? 0);
+            s.wickets += Number(row.wickets ?? 0);
+            s.maidens += Number(row.maidens ?? 0);
+            s.wides += Number(row.wides ?? 0);
+            s.no_balls += Number(row.no_balls ?? 0);
+            s.fours_conceded += Number(row.fours_conceded ?? 0);
+            s.sixes_conceded += Number(row.sixes_conceded ?? 0);
+
+            const wk = Number(row.wickets ?? 0);
+            if (wk >= 5) s.five_fers += 1;
+            else if (wk >= 3) s.three_fers += 1;
+
+            if (Number.isFinite(mid)) addMatch(pid, mid);
+          }
+
+          for (const row of (fieldRes.data as any[]) ?? []) {
+            const pid = Number(row.player_id);
+            const mid = Number(row.match_id);
+            if (!Number.isFinite(pid)) continue;
+            const s = ensure(pid);
+            s.catches += Number(row.catches ?? 0);
+            s.runouts += Number(row.runouts ?? 0);
+            s.stumpings += Number(row.stumpings ?? 0);
+            s.dropped_catches += Number(row.dropped_catches ?? 0);
+            if (Number.isFinite(mid)) addMatch(pid, mid);
+          }
+
+          statsData = [...byPlayer.values()].map((s) => ({
+            ...s,
+            matches: byPlayerMatches.get(s.player_id)?.size ?? 0,
+          }));
+        }
+      } else {
+        // Fetch stats from the view
+        const { data: viewData, error: statsError } = await supabase
+          .from('player_stats')
+          .select('*');
+
+        if (statsError) throw statsError;
+        statsData = (viewData as any[]) ?? [];
+      }
 
       // Fetch scoring settings (single-row)
       const { data: scoringData, error: scoringError } = await supabase
@@ -224,8 +385,11 @@ export function usePlayerRankings() {
 
     // Subscribe to realtime updates
     const playersChannel = supabase
-      .channel('players-realtime')
+      .channel(seriesId ? `players-realtime-series-${seriesId}` : 'players-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        fetchPlayers();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
         fetchPlayers();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'batting_inputs' }, () => {
@@ -245,7 +409,7 @@ export function usePlayerRankings() {
     return () => {
       supabase.removeChannel(playersChannel);
     };
-  }, []);
+  }, [seriesId]);
 
   const getBattingRankings = (minMatches: number = 0): RankingPlayer[] => {
     return players

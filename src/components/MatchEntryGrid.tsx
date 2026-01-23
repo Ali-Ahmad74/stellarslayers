@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +100,18 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
   );
 
   const [matchId, setMatchId] = useState<string>(sortedMatches[0]?.id ? String(sortedMatches[0].id) : "");
+
+  useEffect(() => {
+    // When the available match list changes (e.g., filtering by series), keep selection valid.
+    if (sortedMatches.length === 0) {
+      setMatchId("");
+      return;
+    }
+    const hasSelected = sortedMatches.some((m) => String(m.id) === matchId);
+    if (!hasSelected) {
+      setMatchId(String(sortedMatches[0].id));
+    }
+  }, [sortedMatches, matchId]);
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState<Record<number, DraftRow>>(() => {
     const init: Record<number, DraftRow> = {};
