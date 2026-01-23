@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScoringSettingsPanel } from '@/components/ScoringSettingsPanel';
+import { MatchEntryGrid } from '@/components/MatchEntryGrid';
 import {
   Tooltip,
   TooltipContent,
@@ -114,6 +115,25 @@ const Admin = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Lock admin access to only the currently signed-in admin user.
+  useEffect(() => {
+    if (loading || !user || !isAdmin) return;
+    supabase
+      .from('user_roles')
+      .delete()
+      .eq('role', 'admin')
+      .neq('user_id', user.id)
+      .then(() => {
+        // No-op; if there are no other admins, nothing happens.
+      });
+  }, [loading, user, isAdmin]);
+
+  useEffect(() => {
+    if (!loading && user && !isAdmin) {
+      navigate('/');
+    }
+  }, [loading, user, isAdmin, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -572,6 +592,26 @@ const Admin = () => {
     return null;
   }
 
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container py-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display">Admin access required</CardTitle>
+              <CardDescription>You don’t have permission to view this page.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-2">
+              <Button onClick={() => navigate('/')}>Go Home</Button>
+              <Button variant="outline" onClick={() => navigate('/auth')}>Switch Account</Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   const getTournamentName = (tournamentId: number | null) => {
     if (!tournamentId) return null;
     return tournaments.find(t => t.id === tournamentId)?.name || null;
@@ -649,19 +689,9 @@ const Admin = () => {
             }}
           />
 
-          {!isAdmin && (
-            <Card className="mb-8 border-amber-500/50 bg-amber-500/10">
-              <CardContent className="p-4">
-                <p className="text-amber-700 dark:text-amber-300 text-sm">
-                  ⚠️ You need admin role to add, edit, or delete data. Contact an existing admin to grant you access.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            {[
+               {[
               { icon: Users, label: 'Players', value: players.length, color: 'bg-blue-500' },
               { icon: Calendar, label: 'Matches', value: matches.length, color: 'bg-emerald-500' },
               { icon: Trophy, label: 'Tournaments', value: tournaments.length, color: 'bg-purple-500' },
@@ -1008,37 +1038,44 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="performance">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle>Player Performance Entry</CardTitle>
-                    <CardDescription>Record batting, bowling, and fielding stats for each match</CardDescription>
-                  </div>
-                  {isAdmin && (
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Single Player Entry</CardTitle>
+                      <CardDescription>Record batting, bowling, and fielding stats for one player in a match</CardDescription>
+                    </div>
                     <Button onClick={() => setPerformanceDialogOpen(true)} disabled={players.length === 0 || matches.length === 0}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Performance
                     </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {players.length === 0 || matches.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                      <p>You need at least one player and one match to add performance data.</p>
-                      <p className="text-sm mt-2">
-                        {players.length === 0 ? 'Start by adding players.' : 'Start by adding a match.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                      <p className="font-medium">Ready to record performance!</p>
-                      <p className="text-sm mt-2">Click "Add Performance" to record batting, bowling, and fielding stats for a player in a match.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    {players.length === 0 || matches.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                        <p>You need at least one player and one match to add performance data.</p>
+                        <p className="text-sm mt-2">
+                          {players.length === 0 ? 'Start by adding players.' : 'Start by adding a match.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                        <p className="font-medium">Ready to record performance!</p>
+                        <p className="text-sm mt-2">Click "Add Performance" to record stats for a player in a match.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {players.length > 0 && matches.length > 0 && (
+                  <MatchEntryGrid
+                    players={players.map((p) => ({ id: p.id, name: p.name }))}
+                    matches={matches.map((m) => ({ id: m.id, match_date: m.match_date, venue: m.venue }))}
+                  />
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="seasons">

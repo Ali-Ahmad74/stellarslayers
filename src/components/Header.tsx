@@ -4,6 +4,7 @@ import { Trophy, Users, BarChart3, Settings, Medal, GitCompare, Calendar, Layout
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [{
   path: '/leaderboard',
@@ -35,6 +36,7 @@ export function Header() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { teamSettings } = useTeamSettings();
+  const { isAdmin } = useAuth();
 
   const teamName = teamSettings?.team_name || 'Cricket Club';
 
@@ -73,12 +75,14 @@ export function Header() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Link to="/admin" className="hidden md:block">
-              <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:border-primary hover:bg-primary/10">
-                <Settings className="w-4 h-4" />
-                Admin
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="hidden md:block">
+                <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:border-primary hover:bg-primary/10">
+                  <Settings className="w-4 h-4" />
+                  Admin
+                </Button>
+              </Link>
+            )}
             
             <Button
               variant="ghost"
@@ -153,15 +157,17 @@ export function Header() {
                   </Link>
                 );
               })}
-              <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start rounded-lg px-4 py-3 text-sm font-medium col-span-2"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin Panel
-                </Button>
-              </Link>
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start rounded-lg px-4 py-3 text-sm font-medium col-span-2"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Admin Panel
+                  </Button>
+                </Link>
+              )}
             </div>
           </motion.nav>
         )}
