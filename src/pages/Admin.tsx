@@ -608,31 +608,42 @@ const Admin = () => {
             tournamentsCount={tournaments.length}
             matchesCount={matches.length}
             hasAnyPerformance={hasAnyPerformance}
-            onGoToStep={(step) => {
+            onGoToStep={(step, intent) => {
+              // "view" = navigate to the tab only; "add" = open the create dialog for that step.
               switch (step) {
                 case 'season':
                   setActiveTab('seasons');
-                  setEditingSeason(undefined);
-                  setSeasonDialogOpen(true);
+                  if (intent === 'add') {
+                    setEditingSeason(undefined);
+                    setSeasonDialogOpen(true);
+                  }
                   break;
                 case 'players':
                   setActiveTab('players');
-                  setEditingPlayer(undefined);
-                  setPlayerDialogOpen(true);
+                  if (intent === 'add') {
+                    setEditingPlayer(undefined);
+                    setPlayerDialogOpen(true);
+                  }
                   break;
                 case 'tournament':
                   setActiveTab('tournaments');
-                  setEditingTournament(undefined);
-                  setTournamentDialogOpen(true);
+                  if (intent === 'add') {
+                    setEditingTournament(undefined);
+                    setTournamentDialogOpen(true);
+                  }
                   break;
                 case 'match':
                   setActiveTab('matches');
-                  setEditingMatch(undefined);
-                  setMatchDialogOpen(true);
+                  if (intent === 'add') {
+                    setEditingMatch(undefined);
+                    setMatchDialogOpen(true);
+                  }
                   break;
                 case 'performance':
                   setActiveTab('performance');
-                  setPerformanceDialogOpen(true);
+                  if (intent === 'add') {
+                    setPerformanceDialogOpen(true);
+                  }
                   break;
               }
             }}

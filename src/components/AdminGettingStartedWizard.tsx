@@ -13,7 +13,7 @@ export interface AdminGettingStartedWizardProps {
   tournamentsCount: number;
   matchesCount: number;
   hasAnyPerformance: boolean;
-  onGoToStep: (step: AdminWizardStepKey) => void;
+  onGoToStep: (step: AdminWizardStepKey, intent: "view" | "add") => void;
 }
 
 export function AdminGettingStartedWizard({
@@ -116,14 +116,14 @@ export function AdminGettingStartedWizard({
                   </div>
                 </div>
               </div>
-              <Button
-                variant={step.done ? "outline" : "default"}
-                size="sm"
-                onClick={() => onGoToStep(step.key)}
-                disabled={blocked}
-              >
-                {step.cta}
-              </Button>
+                <Button
+                  variant={step.done ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => onGoToStep(step.key, step.done ? "view" : "add")}
+                  disabled={blocked}
+                >
+                  {step.done ? "View" : step.cta}
+                </Button>
             </div>
             );
           })}
