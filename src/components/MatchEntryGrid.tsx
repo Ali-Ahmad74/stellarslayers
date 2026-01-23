@@ -345,7 +345,17 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           </CardContent>
         </Card>
 
-        <ScrollArea className="h-[520px] rounded-lg border border-border">
+        <ScrollArea
+          className="h-[520px] rounded-lg border border-border overscroll-contain"
+          onWheelCapture={(e) => {
+            // Prevent the parent page from scrolling while using the grid.
+            e.stopPropagation();
+          }}
+          onTouchMoveCapture={(e) => {
+            // Same for touch scrolling on mobile.
+            e.stopPropagation();
+          }}
+        >
           <div className="min-w-[1200px]">
             <div className="sticky top-0 z-10 bg-background border-b border-border">
               <div className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] px-3 py-2 text-xs font-semibold text-muted-foreground">
