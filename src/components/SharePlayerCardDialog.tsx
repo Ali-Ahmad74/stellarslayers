@@ -49,7 +49,7 @@ export function SharePlayerCardDialog({
   teamName,
   scoringSettings,
 }: SharePlayerCardDialogProps) {
-  const [format, setFormat] = useState<CardFormat>("story");
+  const [format, setFormat] = useState<CardFormat>("square");
   const [downloading, setDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
