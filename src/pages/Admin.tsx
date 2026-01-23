@@ -121,6 +121,7 @@ const Admin = () => {
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteSampleDialogOpen, setDeleteSampleDialogOpen] = useState(false);
 
   // Bulk assign matches -> series
   const [bulkAssignSeriesId, setBulkAssignSeriesId] = useState<string>('');
@@ -716,6 +717,91 @@ const Admin = () => {
     setSaving(false);
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
+  };
+
+  const handleConfirmDeleteSampleData = async () => {
+    setSaving(true);
+    try {
+      // 1) Identify sample entities
+      const [samplePlayersRes, sampleSeriesRes] = await Promise.all([
+        supabase.from('players').select('id').like('name', '(Sample)%'),
+        supabase.from('series').select('id').like('name', '(Sample)%'),
+      ]);
+
+      if (samplePlayersRes.error) throw samplePlayersRes.error;
+      if (sampleSeriesRes.error) throw sampleSeriesRes.error;
+
+      const samplePlayerIds = (samplePlayersRes.data || []).map((r) => r.id);
+      const sampleSeriesIds = (sampleSeriesRes.data || []).map((r) => r.id);
+
+      // Matches don't have a name column; sample matches were seeded with opponent_name like '(Sample)%'
+      // and are also associated to sample series.
+      const sampleMatchesByOpponentRes = await supabase
+        .from('matches')
+        .select('id')
+        .like('opponent_name', '(Sample)%');
+      if (sampleMatchesByOpponentRes.error) throw sampleMatchesByOpponentRes.error;
+
+      const sampleMatchIds = new Set<number>((sampleMatchesByOpponentRes.data || []).map((r) => r.id));
+
+      if (sampleSeriesIds.length > 0) {
+        const sampleMatchesBySeriesRes = await supabase
+          .from('matches')
+          .select('id')
+          .in('series_id', sampleSeriesIds as any);
+        if (sampleMatchesBySeriesRes.error) throw sampleMatchesBySeriesRes.error;
+        (sampleMatchesBySeriesRes.data || []).forEach((r) => sampleMatchIds.add(r.id));
+      }
+
+      const matchIds = Array.from(sampleMatchIds);
+
+      if (samplePlayerIds.length === 0 && sampleSeriesIds.length === 0 && matchIds.length === 0) {
+        toast.info('No sample data found to delete');
+        setDeleteSampleDialogOpen(false);
+        return;
+      }
+
+      // 2) Delete performance inputs first
+      const inputOrParts: string[] = [];
+      if (samplePlayerIds.length > 0) inputOrParts.push(`player_id.in.(${samplePlayerIds.join(',')})`);
+      if (matchIds.length > 0) inputOrParts.push(`match_id.in.(${matchIds.join(',')})`);
+      const inputsOrFilter = inputOrParts.join(',');
+
+      if (inputsOrFilter) {
+        const [batDel, bowlDel, fieldDel] = await Promise.all([
+          supabase.from('batting_inputs').delete().or(inputsOrFilter),
+          supabase.from('bowling_inputs').delete().or(inputsOrFilter),
+          supabase.from('fielding_inputs').delete().or(inputsOrFilter),
+        ]);
+        if (batDel.error) throw batDel.error;
+        if (bowlDel.error) throw bowlDel.error;
+        if (fieldDel.error) throw fieldDel.error;
+      }
+
+      // 3) Delete matches, then players/series
+      if (matchIds.length > 0) {
+        const { error } = await supabase.from('matches').delete().in('id', matchIds);
+        if (error) throw error;
+      }
+
+      if (samplePlayerIds.length > 0) {
+        const { error } = await supabase.from('players').delete().in('id', samplePlayerIds);
+        if (error) throw error;
+      }
+
+      if (sampleSeriesIds.length > 0) {
+        const { error } = await supabase.from('series').delete().in('id', sampleSeriesIds as any);
+        if (error) throw error;
+      }
+
+      toast.success('Sample data deleted');
+      fetchData();
+      setDeleteSampleDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete sample data');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -1552,6 +1638,31 @@ const Admin = () => {
                       )}
                     </div>
                   </div>
+
+                  {isAdmin && (
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Info className="w-4 h-4 text-muted-foreground" />
+                            <p className="font-semibold">Sample data</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Deletes only records whose names start with “(Sample)” (plus related performance inputs).
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          className="gap-2"
+                          disabled={saving}
+                          onClick={() => setDeleteSampleDialogOpen(true)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete sample data
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1621,6 +1732,15 @@ const Admin = () => {
         onConfirm={handleConfirmDelete}
         title={`Delete ${deleteTarget?.type ? deleteTarget.type.charAt(0).toUpperCase() + deleteTarget.type.slice(1) : ''}?`}
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        isLoading={saving}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteSampleDialogOpen}
+        onOpenChange={setDeleteSampleDialogOpen}
+        onConfirm={handleConfirmDeleteSampleData}
+        title="Delete sample data?"
+        description='This will remove all records prefixed with "(Sample)" (players, series, matches) and all related performance inputs. This action cannot be undone.'
         isLoading={saving}
       />
     </div>
