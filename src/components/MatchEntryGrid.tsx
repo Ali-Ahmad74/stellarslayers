@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 type Player = { id: number; name: string };
@@ -94,6 +95,26 @@ function emptyDraftRow(): DraftRow {
 }
 
 export function MatchEntryGrid({ players, matches }: { players: Player[]; matches: Match[] }) {
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem("bulkGridAutoScroll");
+      if (raw === null) return true;
+      return raw === "true";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("bulkGridAutoScroll", String(autoScrollEnabled));
+    } catch {
+      // ignore
+    }
+  }, [autoScrollEnabled]);
+
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
     [matches],
@@ -245,6 +266,83 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     }
   };
 
+  const columns = useMemo(
+    () =>
+      [
+        { group: "batting", key: "runs" as const },
+        { group: "batting", key: "balls" as const },
+        { group: "batting", key: "fours" as const },
+        { group: "batting", key: "sixes" as const },
+        { group: "bowling", key: "balls" as const },
+        { group: "bowling", key: "runs_conceded" as const },
+        { group: "bowling", key: "wickets" as const },
+        { group: "bowling", key: "maidens" as const },
+        { group: "bowling", key: "wides" as const },
+        { group: "bowling", key: "no_balls" as const },
+        { group: "bowling", key: "fours_conceded" as const },
+        { group: "bowling", key: "sixes_conceded" as const },
+        { group: "fielding", key: "catches" as const },
+        { group: "fielding", key: "runouts" as const },
+        { group: "fielding", key: "stumpings" as const },
+        { group: "fielding", key: "dropped_catches" as const },
+      ] as const,
+    [],
+  );
+
+  const focusCell = (playerId: number, colIndex: number) => {
+    const key = `${playerId}:${colIndex}`;
+    const el = inputRefs.current[key];
+    if (!el) return;
+
+    el.focus();
+    el.select?.();
+
+    if (!autoScrollEnabled) return;
+
+    // Horizontal auto-scroll within the scroll-area viewport (avoid scrolling the whole page)
+    requestAnimationFrame(() => {
+      const root = scrollAreaRef.current;
+      const viewport = root?.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+      if (!viewport) return;
+
+      const cellRect = el.getBoundingClientRect();
+      const vpRect = viewport.getBoundingClientRect();
+
+      const cellCenter = cellRect.left + cellRect.width / 2;
+      const vpCenter = vpRect.left + vpRect.width / 2;
+      const delta = cellCenter - vpCenter;
+
+      viewport.scrollLeft += delta;
+    });
+  };
+
+  const handleCellKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, playerIndex: number, colIndex: number) => {
+    const isArrowLeft = e.key === "ArrowLeft";
+    const isArrowRight = e.key === "ArrowRight";
+    const isArrowUp = e.key === "ArrowUp";
+    const isArrowDown = e.key === "ArrowDown";
+    const isEnter = e.key === "Enter";
+
+    if (!(isArrowLeft || isArrowRight || isArrowUp || isArrowDown || isEnter)) return;
+    e.preventDefault();
+
+    const nextCol = isArrowLeft ? colIndex - 1 : isArrowRight ? colIndex + 1 : colIndex;
+    const nextRow = isEnter
+      ? playerIndex + (e.shiftKey ? -1 : 1)
+      : isArrowUp
+        ? playerIndex - 1
+        : isArrowDown
+          ? playerIndex + 1
+          : playerIndex;
+
+    const boundedCol = Math.max(0, Math.min(columns.length - 1, nextCol));
+    const boundedRow = Math.max(0, Math.min(players.length - 1, nextRow));
+
+    const nextPlayerId = players[boundedRow]?.id;
+    if (!nextPlayerId) return;
+    focusCell(nextPlayerId, boundedCol);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -282,9 +380,15 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           </div>
 
           <div className="flex md:justify-end items-end">
-            <Button onClick={handleSave} disabled={saving || selectedCount === 0 || !matchId}>
-              {saving ? "Saving…" : "Save all"}
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">Auto-scroll</Label>
+                <Switch checked={autoScrollEnabled} onCheckedChange={setAutoScrollEnabled} />
+              </div>
+              <Button onClick={handleSave} disabled={saving || selectedCount === 0 || !matchId}>
+                {saving ? "Saving…" : "Save all"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -346,6 +450,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
         </Card>
 
         <ScrollArea
+          ref={scrollAreaRef}
           className="h-[520px] rounded-lg border border-border overscroll-contain"
           onWheelCapture={(e) => {
             // Prevent the parent page from scrolling while using the grid.
@@ -359,7 +464,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           <div className="min-w-[1200px]">
             <div className="sticky top-0 z-10 bg-background border-b border-border">
               <div className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] px-3 py-2 text-xs font-semibold text-muted-foreground">
-                <div>Player</div>
+                <div className="sticky left-0 z-20 bg-background pr-2">Player</div>
                 <div>Runs</div>
                 <div>Balls</div>
                 <div>4s</div>
@@ -380,14 +485,14 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
               </div>
             </div>
 
-            {players.map((p) => {
+            {players.map((p, playerIndex) => {
               const r = rows[p.id] ?? emptyDraftRow();
               return (
                 <div
                   key={p.id}
                   className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] items-center gap-2 px-3 py-2 border-b border-border"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="sticky left-0 z-10 bg-background flex items-center gap-2 pr-2 border-r border-border">
                     <Checkbox
                       checked={r.include}
                       onCheckedChange={(checked) =>
@@ -403,46 +508,27 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                   </div>
 
                   {/* Batting */}
-                  <Input
-                    inputMode="numeric"
-                    value={r.batting.runs}
-                    onChange={(e) =>
-                      setRows((prev) => ({
-                        ...prev,
-                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, runs: e.target.value } },
-                      }))
-                    }
-                  />
-                  <Input
-                    inputMode="numeric"
-                    value={r.batting.balls}
-                    onChange={(e) =>
-                      setRows((prev) => ({
-                        ...prev,
-                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, balls: e.target.value } },
-                      }))
-                    }
-                  />
-                  <Input
-                    inputMode="numeric"
-                    value={r.batting.fours}
-                    onChange={(e) =>
-                      setRows((prev) => ({
-                        ...prev,
-                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, fours: e.target.value } },
-                      }))
-                    }
-                  />
-                  <Input
-                    inputMode="numeric"
-                    value={r.batting.sixes}
-                    onChange={(e) =>
-                      setRows((prev) => ({
-                        ...prev,
-                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, sixes: e.target.value } },
-                      }))
-                    }
-                  />
+                  {["runs", "balls", "fours", "sixes"].map((key, idx) => (
+                    <Input
+                      key={`${p.id}-batting-${key}`}
+                      inputMode="numeric"
+                      value={(r.batting as any)[key]}
+                      ref={(el) => {
+                        inputRefs.current[`${p.id}:${idx}`] = el;
+                      }}
+                      onFocus={() => focusCell(p.id, idx)}
+                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, idx)}
+                      onChange={(e) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: {
+                            ...prev[p.id],
+                            batting: { ...prev[p.id].batting, [key]: e.target.value },
+                          },
+                        }))
+                      }
+                    />
+                  ))}
                   <div className="flex justify-center">
                     <Checkbox
                       checked={r.batting.out}
@@ -458,20 +544,25 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                   {/* Bowling */}
                   {(
                     [
-                      ["balls", r.bowling.balls],
-                      ["runs_conceded", r.bowling.runs_conceded],
-                      ["wickets", r.bowling.wickets],
-                      ["maidens", r.bowling.maidens],
-                      ["wides", r.bowling.wides],
-                      ["no_balls", r.bowling.no_balls],
-                      ["fours_conceded", r.bowling.fours_conceded],
-                      ["sixes_conceded", r.bowling.sixes_conceded],
+                      "balls",
+                      "runs_conceded",
+                      "wickets",
+                      "maidens",
+                      "wides",
+                      "no_balls",
+                      "fours_conceded",
+                      "sixes_conceded",
                     ] as const
-                  ).map(([key, value]) => (
+                  ).map((key, i) => (
                     <Input
                       key={`${p.id}-bowling-${key}`}
                       inputMode="numeric"
-                      value={value}
+                      value={(r.bowling as any)[key]}
+                      ref={(el) => {
+                        inputRefs.current[`${p.id}:${4 + i}`] = el;
+                      }}
+                      onFocus={() => focusCell(p.id, 4 + i)}
+                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 4 + i)}
                       onChange={(e) =>
                         setRows((prev) => ({
                           ...prev,
@@ -486,17 +577,17 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
 
                   {/* Fielding */}
                   {(
-                    [
-                      ["catches", r.fielding.catches],
-                      ["runouts", r.fielding.runouts],
-                      ["stumpings", r.fielding.stumpings],
-                      ["dropped_catches", r.fielding.dropped_catches],
-                    ] as const
-                  ).map(([key, value]) => (
+                    ["catches", "runouts", "stumpings", "dropped_catches"] as const
+                  ).map((key, i) => (
                     <Input
                       key={`${p.id}-fielding-${key}`}
                       inputMode="numeric"
-                      value={value}
+                      value={(r.fielding as any)[key]}
+                      ref={(el) => {
+                        inputRefs.current[`${p.id}:${12 + i}`] = el;
+                      }}
+                      onFocus={() => focusCell(p.id, 12 + i)}
+                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 12 + i)}
                       onChange={(e) =>
                         setRows((prev) => ({
                           ...prev,
