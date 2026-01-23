@@ -131,6 +131,7 @@ const Admin = () => {
 
   // Performance tab filtering
   const [performanceSeriesId, setPerformanceSeriesId] = useState<string>('all');
+  const [performanceTournamentId, setPerformanceTournamentId] = useState<string>('all');
   
   // Edit states
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
@@ -1459,30 +1460,55 @@ const Admin = () => {
                     <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                       <div>
                         <CardTitle>Bulk Entry (Grid)</CardTitle>
-                        <CardDescription>Optionally filter matches by series before entering performance</CardDescription>
+                        <CardDescription>Optionally filter matches by tournament and series before entering performance</CardDescription>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Series</span>
-                        <Select value={performanceSeriesId} onValueChange={setPerformanceSeriesId}>
-                          <SelectTrigger className="w-[260px]">
-                            <SelectValue placeholder="All series" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All series</SelectItem>
-                            <SelectItem value="none">No series</SelectItem>
-                            {series.map((s) => (
-                              <SelectItem key={s.id} value={String(s.id)}>
-                                {s.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Tournament</span>
+                          <Select value={performanceTournamentId} onValueChange={setPerformanceTournamentId}>
+                            <SelectTrigger className="w-[260px]">
+                              <SelectValue placeholder="All tournaments" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All tournaments</SelectItem>
+                              <SelectItem value="none">No tournament</SelectItem>
+                              {tournaments.map((t) => (
+                                <SelectItem key={t.id} value={String(t.id)}>
+                                  {t.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Series</span>
+                          <Select value={performanceSeriesId} onValueChange={setPerformanceSeriesId}>
+                            <SelectTrigger className="w-[260px]">
+                              <SelectValue placeholder="All series" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All series</SelectItem>
+                              <SelectItem value="none">No series</SelectItem>
+                              {series.map((s) => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <MatchEntryGrid
                         players={players.map((p) => ({ id: p.id, name: p.name }))}
                         matches={matches
+                          .filter((m) => {
+                            if (performanceTournamentId === 'all') return true;
+                            if (performanceTournamentId === 'none') return !m.tournament_id;
+                            return Number(m.tournament_id) === Number(performanceTournamentId);
+                          })
                           .filter((m) => {
                             if (performanceSeriesId === 'all') return true;
                             if (performanceSeriesId === 'none') return !m.series_id;
