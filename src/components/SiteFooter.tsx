@@ -3,7 +3,7 @@ import { useTeamSettings } from "@/hooks/useTeamSettings";
 export function SiteFooter() {
   const { teamSettings } = useTeamSettings();
 
-  const teamName = teamSettings?.team_name || "Cricket Club";
+  const teamName = teamSettings?.team_name || "Stellar Slayers";
   const year = new Date().getFullYear();
 
   return (

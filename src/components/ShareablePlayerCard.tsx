@@ -27,7 +27,7 @@ export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareablePlayerCar
   ({ 
     player, 
     format = 'story', 
-    teamName = 'Cricket Club', 
+    teamName = 'Stellar Slayers', 
     teamLogoUrl = null,
     scoringSettings,
     watermarkEnabled = false,

@@ -38,7 +38,7 @@ export function Header() {
   const { teamSettings } = useTeamSettings();
   const { isAdmin } = useAuth();
 
-  const teamName = teamSettings?.team_name || 'Cricket Club';
+  const teamName = teamSettings?.team_name || 'Stellar Slayers';
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
