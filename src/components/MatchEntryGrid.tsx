@@ -1,0 +1,395 @@
+import { useMemo, useState } from "react";
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+
+type Player = { id: number; name: string };
+type Match = { id: number; match_date: string; venue: string | null };
+
+const int0 = z.number().int().min(0);
+
+const rowSchema = z.object({
+  player_id: z.number().int().positive(),
+  batting: z
+    .object({
+      runs: int0,
+      balls: int0,
+      fours: int0,
+      sixes: int0,
+      out: z.boolean(),
+    })
+    .optional(),
+  bowling: z
+    .object({
+      balls: int0,
+      runs_conceded: int0,
+      wickets: int0,
+      maidens: int0,
+      wides: int0,
+      no_balls: int0,
+      fours_conceded: int0,
+      sixes_conceded: int0,
+    })
+    .optional(),
+  fielding: z
+    .object({
+      catches: int0,
+      runouts: int0,
+      stumpings: int0,
+      dropped_catches: int0,
+    })
+    .optional(),
+});
+
+const payloadSchema = z.object({
+  match_id: z.number().int().positive(),
+  rows: z.array(rowSchema).min(1).max(30),
+});
+
+function toInt(value: string): number {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+type DraftRow = {
+  include: boolean;
+  batting: { runs: string; balls: string; fours: string; sixes: string; out: boolean };
+  bowling: {
+    balls: string;
+    runs_conceded: string;
+    wickets: string;
+    maidens: string;
+    wides: string;
+    no_balls: string;
+    fours_conceded: string;
+    sixes_conceded: string;
+  };
+  fielding: { catches: string; runouts: string; stumpings: string; dropped_catches: string };
+};
+
+function emptyDraftRow(): DraftRow {
+  return {
+    include: false,
+    batting: { runs: "0", balls: "0", fours: "0", sixes: "0", out: false },
+    bowling: {
+      balls: "0",
+      runs_conceded: "0",
+      wickets: "0",
+      maidens: "0",
+      wides: "0",
+      no_balls: "0",
+      fours_conceded: "0",
+      sixes_conceded: "0",
+    },
+    fielding: { catches: "0", runouts: "0", stumpings: "0", dropped_catches: "0" },
+  };
+}
+
+export function MatchEntryGrid({ players, matches }: { players: Player[]; matches: Match[] }) {
+  const sortedMatches = useMemo(
+    () => [...matches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
+    [matches],
+  );
+
+  const [matchId, setMatchId] = useState<string>(sortedMatches[0]?.id ? String(sortedMatches[0].id) : "");
+  const [saving, setSaving] = useState(false);
+  const [rows, setRows] = useState<Record<number, DraftRow>>(() => {
+    const init: Record<number, DraftRow> = {};
+    for (const p of players) init[p.id] = emptyDraftRow();
+    return init;
+  });
+
+  const selectedCount = useMemo(
+    () => Object.values(rows).filter((r) => r.include).length,
+    [rows],
+  );
+
+  const handleToggleAll = (include: boolean) => {
+    setRows((prev) => {
+      const next: Record<number, DraftRow> = {};
+      for (const [k, v] of Object.entries(prev)) next[Number(k)] = { ...v, include };
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    const mId = Number(matchId);
+    if (!mId) {
+      toast.error("Select a match first");
+      return;
+    }
+
+    const includedPlayers = players.filter((p) => rows[p.id]?.include);
+    if (includedPlayers.length === 0) {
+      toast.error("Select at least 1 player");
+      return;
+    }
+
+    const payload = {
+      match_id: mId,
+      rows: includedPlayers.map((p) => {
+        const r = rows[p.id];
+        return {
+          player_id: p.id,
+          batting: {
+            runs: toInt(r.batting.runs),
+            balls: toInt(r.batting.balls),
+            fours: toInt(r.batting.fours),
+            sixes: toInt(r.batting.sixes),
+            out: r.batting.out,
+          },
+          bowling: {
+            balls: toInt(r.bowling.balls),
+            runs_conceded: toInt(r.bowling.runs_conceded),
+            wickets: toInt(r.bowling.wickets),
+            maidens: toInt(r.bowling.maidens),
+            wides: toInt(r.bowling.wides),
+            no_balls: toInt(r.bowling.no_balls),
+            fours_conceded: toInt(r.bowling.fours_conceded),
+            sixes_conceded: toInt(r.bowling.sixes_conceded),
+          },
+          fielding: {
+            catches: toInt(r.fielding.catches),
+            runouts: toInt(r.fielding.runouts),
+            stumpings: toInt(r.fielding.stumpings),
+            dropped_catches: toInt(r.fielding.dropped_catches),
+          },
+        };
+      }),
+    };
+
+    const parsed = payloadSchema.safeParse(payload);
+    if (!parsed.success) {
+      toast.error("Please fix invalid numbers in the grid");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke("bulk-upsert-performances", {
+        body: parsed.data,
+      });
+      if (error) throw error;
+      toast.success("Saved match performances");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display">Bulk Match Entry (Grid)</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Match</Label>
+            <Select value={matchId} onValueChange={setMatchId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select match" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortedMatches.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {new Date(m.match_date).toLocaleDateString()} {m.venue ? `• ${m.venue}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Squad</Label>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => handleToggleAll(true)}>
+                Select all
+              </Button>
+              <Button type="button" variant="outline" onClick={() => handleToggleAll(false)}>
+                Clear
+              </Button>
+              <div className="text-sm text-muted-foreground">{selectedCount} selected</div>
+            </div>
+          </div>
+
+          <div className="flex md:justify-end items-end">
+            <Button onClick={handleSave} disabled={saving || selectedCount === 0 || !matchId}>
+              {saving ? "Saving…" : "Save all"}
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        <ScrollArea className="h-[520px] rounded-lg border border-border">
+          <div className="min-w-[1200px]">
+            <div className="sticky top-0 z-10 bg-background border-b border-border">
+              <div className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] px-3 py-2 text-xs font-semibold text-muted-foreground">
+                <div>Player</div>
+                <div>Runs</div>
+                <div>Balls</div>
+                <div>4s</div>
+                <div>6s</div>
+                <div>Out</div>
+                <div>Bowl balls</div>
+                <div>Runs conc</div>
+                <div>Wkts</div>
+                <div>Maidens</div>
+                <div>Wides</div>
+                <div>No-balls</div>
+                <div>4s conc</div>
+                <div>6s conc</div>
+                <div>Catches</div>
+                <div>Runouts</div>
+                <div>Stump</div>
+                <div>Dropped</div>
+              </div>
+            </div>
+
+            {players.map((p) => {
+              const r = rows[p.id] ?? emptyDraftRow();
+              return (
+                <div
+                  key={p.id}
+                  className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] items-center gap-2 px-3 py-2 border-b border-border"
+                >
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={r.include}
+                      onCheckedChange={(checked) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: { ...prev[p.id], include: Boolean(checked) },
+                        }))
+                      }
+                    />
+                    <div className="text-sm font-medium truncate" title={p.name}>
+                      {p.name}
+                    </div>
+                  </div>
+
+                  {/* Batting */}
+                  <Input
+                    inputMode="numeric"
+                    value={r.batting.runs}
+                    onChange={(e) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, runs: e.target.value } },
+                      }))
+                    }
+                  />
+                  <Input
+                    inputMode="numeric"
+                    value={r.batting.balls}
+                    onChange={(e) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, balls: e.target.value } },
+                      }))
+                    }
+                  />
+                  <Input
+                    inputMode="numeric"
+                    value={r.batting.fours}
+                    onChange={(e) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, fours: e.target.value } },
+                      }))
+                    }
+                  />
+                  <Input
+                    inputMode="numeric"
+                    value={r.batting.sixes}
+                    onChange={(e) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, sixes: e.target.value } },
+                      }))
+                    }
+                  />
+                  <div className="flex justify-center">
+                    <Checkbox
+                      checked={r.batting.out}
+                      onCheckedChange={(checked) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, out: Boolean(checked) } },
+                        }))
+                      }
+                    />
+                  </div>
+
+                  {/* Bowling */}
+                  {(
+                    [
+                      ["balls", r.bowling.balls],
+                      ["runs_conceded", r.bowling.runs_conceded],
+                      ["wickets", r.bowling.wickets],
+                      ["maidens", r.bowling.maidens],
+                      ["wides", r.bowling.wides],
+                      ["no_balls", r.bowling.no_balls],
+                      ["fours_conceded", r.bowling.fours_conceded],
+                      ["sixes_conceded", r.bowling.sixes_conceded],
+                    ] as const
+                  ).map(([key, value]) => (
+                    <Input
+                      key={`${p.id}-bowling-${key}`}
+                      inputMode="numeric"
+                      value={value}
+                      onChange={(e) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: {
+                            ...prev[p.id],
+                            bowling: { ...prev[p.id].bowling, [key]: e.target.value },
+                          },
+                        }))
+                      }
+                    />
+                  ))}
+
+                  {/* Fielding */}
+                  {(
+                    [
+                      ["catches", r.fielding.catches],
+                      ["runouts", r.fielding.runouts],
+                      ["stumpings", r.fielding.stumpings],
+                      ["dropped_catches", r.fielding.dropped_catches],
+                    ] as const
+                  ).map(([key, value]) => (
+                    <Input
+                      key={`${p.id}-fielding-${key}`}
+                      inputMode="numeric"
+                      value={value}
+                      onChange={(e) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: {
+                            ...prev[p.id],
+                            fielding: { ...prev[p.id].fielding, [key]: e.target.value },
+                          },
+                        }))
+                      }
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
