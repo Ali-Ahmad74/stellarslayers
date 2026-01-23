@@ -7,6 +7,7 @@ import { RankingFilters } from '@/components/RankingFilters';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { Loader2, Trophy, Target, Shield, Crown } from 'lucide-react';
+import { SiteFooter } from '@/components/SiteFooter';
 
 const Index = () => {
   const [minMatches, setMinMatches] = useState(0);
@@ -142,27 +143,7 @@ const Index = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-8 mt-12">
-        <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🏏</span>
-              <div>
-                <p className="font-display text-foreground font-semibold tracking-wide">
-                  Stellar Slayers
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Cricket Rankings System
-                </p>
-              </div>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              © {new Date().getFullYear()} Stellar Slayers Cricket Club. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

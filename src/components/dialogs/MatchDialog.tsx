@@ -14,11 +14,13 @@ interface MatchDialogProps {
     match_date: string;
     overs: number;
     venue: string | null;
+    tournament_id?: number | null;
     opponent_name?: string | null;
     our_score?: number | null;
     opponent_score?: number | null;
     result?: string | null;
   };
+  tournaments?: Array<{ id: number; name: string }>;
   isLoading?: boolean;
 }
 
@@ -27,6 +29,7 @@ export interface MatchFormData {
   match_date: string;
   overs: number;
   venue: string | null;
+  tournament_id: number | null;
   opponent_name: string | null;
   our_score: number;
   opponent_score: number;
@@ -35,7 +38,7 @@ export interface MatchFormData {
 
 const RESULTS = ['Won', 'Lost', 'Draw', 'Tied', 'No Result'];
 
-export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: MatchDialogProps) {
+export function MatchDialog({ open, onOpenChange, onSave, match, tournaments = [], isLoading }: MatchDialogProps) {
   const [matchDate, setMatchDate] = useState('');
   const [overs, setOvers] = useState(20);
   const [venue, setVenue] = useState('');
@@ -43,6 +46,7 @@ export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: Ma
   const [ourScore, setOurScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
   const [result, setResult] = useState('');
+  const [tournamentId, setTournamentId] = useState<string>('none');
 
   useEffect(() => {
     if (match) {
@@ -53,6 +57,7 @@ export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: Ma
       setOurScore(match.our_score || 0);
       setOpponentScore(match.opponent_score || 0);
       setResult(match.result || '');
+      setTournamentId(match.tournament_id ? String(match.tournament_id) : 'none');
     } else {
       setMatchDate(new Date().toISOString().split('T')[0]);
       setOvers(20);
@@ -61,6 +66,7 @@ export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: Ma
       setOurScore(0);
       setOpponentScore(0);
       setResult('');
+      setTournamentId('none');
     }
   }, [match, open]);
 
@@ -71,6 +77,7 @@ export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: Ma
       match_date: matchDate,
       overs,
       venue: venue.trim() || null,
+      tournament_id: tournamentId === 'none' ? null : Number(tournamentId),
       opponent_name: opponentName.trim() || null,
       our_score: ourScore,
       opponent_score: opponentScore,
@@ -122,6 +129,23 @@ export function MatchDialog({ open, onOpenChange, onSave, match, isLoading }: Ma
                 placeholder="Enter venue name"
                 maxLength={100}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tournament">Tournament</Label>
+              <Select value={tournamentId} onValueChange={setTournamentId}>
+                <SelectTrigger id="tournament">
+                  <SelectValue placeholder="Select tournament (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No tournament</SelectItem>
+                  {tournaments.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

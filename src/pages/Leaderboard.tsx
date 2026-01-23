@@ -17,6 +17,7 @@ import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
 import { useFieldingRankingsBySeason } from '@/hooks/useFieldingRankingsBySeason';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { SiteFooter } from '@/components/SiteFooter';
 type SortKey = 'totalPoints' | 'battingPoints' | 'bowlingPoints' | 'fieldingPoints' | 'weeklyChange' | 'monthlyChange';
 const Leaderboard = () => {
   const {
@@ -647,13 +648,7 @@ const Leaderboard = () => {
         </motion.div>
       </main>
 
-      <footer className="border-t bg-card py-6 mt-12">
-        <div className="container text-center">
-          <p className="text-muted-foreground">
-            © 2025 Stellar Slayers Cricket Club. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>;
 };
 export default Leaderboard;
