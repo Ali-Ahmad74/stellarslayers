@@ -261,6 +261,7 @@ export type Database = {
           our_score: number | null
           overs: number
           result: string | null
+          series_id: number | null
           tournament_id: number | null
           venue: string | null
         }
@@ -273,6 +274,7 @@ export type Database = {
           our_score?: number | null
           overs?: number
           result?: string | null
+          series_id?: number | null
           tournament_id?: number | null
           venue?: string | null
         }
@@ -285,10 +287,18 @@ export type Database = {
           our_score?: number | null
           overs?: number
           result?: string | null
+          series_id?: number | null
           tournament_id?: number | null
           venue?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "matches_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "matches_tournament_id_fkey"
             columns: ["tournament_id"]
@@ -490,6 +500,42 @@ export type Database = {
           name?: string
           start_date?: string | null
           year?: number
+        }
+        Relationships: []
+      }
+      series: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: number
+          is_active: boolean
+          name: string
+          start_date: string | null
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: number
+          is_active?: boolean
+          name: string
+          start_date?: string | null
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: number
+          is_active?: boolean
+          name?: string
+          start_date?: string | null
+          updated_at?: string
+          venue?: string | null
         }
         Relationships: []
       }
