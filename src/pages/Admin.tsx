@@ -28,6 +28,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScoringSettingsPanel } from '@/components/ScoringSettingsPanel';
 import { MatchEntryGrid } from '@/components/MatchEntryGrid';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -118,6 +121,15 @@ const Admin = () => {
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Bulk assign matches -> series
+  const [bulkAssignSeriesId, setBulkAssignSeriesId] = useState<string>('');
+  const [bulkAssignMode, setBulkAssignMode] = useState<'unassigned' | 'all'>('unassigned');
+  const [bulkAssignMatchIds, setBulkAssignMatchIds] = useState<Record<number, boolean>>({});
+  const [bulkAssignSaving, setBulkAssignSaving] = useState(false);
+
+  // Performance tab filtering
+  const [performanceSeriesId, setPerformanceSeriesId] = useState<string>('all');
   
   // Edit states
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
@@ -157,6 +169,12 @@ const Admin = () => {
       fetchData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!bulkAssignSeriesId && series.length > 0) {
+      setBulkAssignSeriesId(String(series[0].id));
+    }
+  }, [series, bulkAssignSeriesId]);
 
   useEffect(() => {
     if (!teamSettings) return;
@@ -438,6 +456,40 @@ const Admin = () => {
   const handleEditTournament = (tournament: Tournament) => {
     setEditingTournament(tournament);
     setTournamentDialogOpen(true);
+  };
+
+  const handleBulkAssign = async () => {
+    const sid = Number(bulkAssignSeriesId);
+    const targetSeriesId = Number.isFinite(sid) ? sid : null;
+    const selectedIds = Object.entries(bulkAssignMatchIds)
+      .filter(([, v]) => v)
+      .map(([k]) => Number(k))
+      .filter((n) => Number.isFinite(n));
+
+    if (!targetSeriesId) {
+      toast.error('Select a series first');
+      return;
+    }
+    if (selectedIds.length === 0) {
+      toast.error('Select at least 1 match');
+      return;
+    }
+
+    setBulkAssignSaving(true);
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .update({ series_id: targetSeriesId })
+        .in('id', selectedIds);
+      if (error) throw error;
+      toast.success(`Assigned ${selectedIds.length} match(es) to series`);
+      setBulkAssignMatchIds({});
+      fetchData();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to assign matches');
+    } finally {
+      setBulkAssignSaving(false);
+    }
   };
 
   // Series CRUD
@@ -1211,6 +1263,77 @@ const Admin = () => {
                   )}
                 </CardContent>
               </Card>
+
+              <Card className="mt-4">
+                <CardHeader className="space-y-2">
+                  <CardTitle>Bulk assign matches to series</CardTitle>
+                  <CardDescription>Select a series, tick matches, and assign in one action</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Target series</Label>
+                      <Select value={bulkAssignSeriesId} onValueChange={setBulkAssignSeriesId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select series" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {series.map((s) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Matches list</Label>
+                      <Select value={bulkAssignMode} onValueChange={(v) => setBulkAssignMode(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned only</SelectItem>
+                          <SelectItem value="all">All matches</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-end md:justify-end">
+                      <Button onClick={handleBulkAssign} disabled={bulkAssignSaving}>
+                        {bulkAssignSaving ? 'Assigning…' : 'Assign selected'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-[320px] rounded-lg border border-border">
+                    <div className="p-3 space-y-2">
+                      {matches
+                        .filter((m) => (bulkAssignMode === 'unassigned' ? !m.series_id : true))
+                        .map((m) => {
+                          const checked = Boolean(bulkAssignMatchIds[m.id]);
+                          const label = `${new Date(m.match_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} • ${m.opponent_name || 'Match'}${m.venue ? ` • ${m.venue}` : ''}`;
+                          return (
+                            <label key={m.id} className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(v) => setBulkAssignMatchIds((prev) => ({ ...prev, [m.id]: Boolean(v) }))}
+                              />
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">{label}</div>
+                                <div className="text-xs text-muted-foreground">Match ID: {m.id}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      {matches.filter((m) => (bulkAssignMode === 'unassigned' ? !m.series_id : true)).length === 0 && (
+                        <div className="text-sm text-muted-foreground">No matches found for this list.</div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="performance">
@@ -1246,10 +1369,43 @@ const Admin = () => {
                 </Card>
 
                 {players.length > 0 && matches.length > 0 && (
-                  <MatchEntryGrid
-                    players={players.map((p) => ({ id: p.id, name: p.name }))}
-                    matches={matches.map((m) => ({ id: m.id, match_date: m.match_date, venue: m.venue }))}
-                  />
+                  <Card>
+                    <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div>
+                        <CardTitle>Bulk Entry (Grid)</CardTitle>
+                        <CardDescription>Optionally filter matches by series before entering performance</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Series</span>
+                        <Select value={performanceSeriesId} onValueChange={setPerformanceSeriesId}>
+                          <SelectTrigger className="w-[260px]">
+                            <SelectValue placeholder="All series" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All series</SelectItem>
+                            <SelectItem value="none">No series</SelectItem>
+                            {series.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <MatchEntryGrid
+                        players={players.map((p) => ({ id: p.id, name: p.name }))}
+                        matches={matches
+                          .filter((m) => {
+                            if (performanceSeriesId === 'all') return true;
+                            if (performanceSeriesId === 'none') return !m.series_id;
+                            return Number(m.series_id) === Number(performanceSeriesId);
+                          })
+                          .map((m) => ({ id: m.id, match_date: m.match_date, venue: m.venue }))}
+                      />
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             </TabsContent>
