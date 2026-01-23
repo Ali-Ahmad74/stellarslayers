@@ -349,6 +349,93 @@ export type Database = {
           },
         ]
       }
+      scoring_settings: {
+        Row: {
+          batting_fifty_bonus: number
+          batting_four_points: number
+          batting_hundred_bonus: number
+          batting_run_points: number
+          batting_six_points: number
+          batting_sr_bonus_cap: number
+          batting_sr_bonus_divisor: number
+          batting_thirty_bonus: number
+          batting_weight: number
+          bowling_eco_bonus_cap: number
+          bowling_eco_bonus_multiplier: number
+          bowling_eco_target: number
+          bowling_fivefer_bonus: number
+          bowling_maiden_points: number
+          bowling_noball_penalty: number
+          bowling_threefer_bonus: number
+          bowling_weight: number
+          bowling_wicket_points: number
+          bowling_wide_penalty: number
+          fielding_catch_points: number
+          fielding_dropped_catch_penalty: number
+          fielding_runout_points: number
+          fielding_stumping_points: number
+          fielding_weight: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          batting_fifty_bonus?: number
+          batting_four_points?: number
+          batting_hundred_bonus?: number
+          batting_run_points?: number
+          batting_six_points?: number
+          batting_sr_bonus_cap?: number
+          batting_sr_bonus_divisor?: number
+          batting_thirty_bonus?: number
+          batting_weight?: number
+          bowling_eco_bonus_cap?: number
+          bowling_eco_bonus_multiplier?: number
+          bowling_eco_target?: number
+          bowling_fivefer_bonus?: number
+          bowling_maiden_points?: number
+          bowling_noball_penalty?: number
+          bowling_threefer_bonus?: number
+          bowling_weight?: number
+          bowling_wicket_points?: number
+          bowling_wide_penalty?: number
+          fielding_catch_points?: number
+          fielding_dropped_catch_penalty?: number
+          fielding_runout_points?: number
+          fielding_stumping_points?: number
+          fielding_weight?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          batting_fifty_bonus?: number
+          batting_four_points?: number
+          batting_hundred_bonus?: number
+          batting_run_points?: number
+          batting_six_points?: number
+          batting_sr_bonus_cap?: number
+          batting_sr_bonus_divisor?: number
+          batting_thirty_bonus?: number
+          batting_weight?: number
+          bowling_eco_bonus_cap?: number
+          bowling_eco_bonus_multiplier?: number
+          bowling_eco_target?: number
+          bowling_fivefer_bonus?: number
+          bowling_maiden_points?: number
+          bowling_noball_penalty?: number
+          bowling_threefer_bonus?: number
+          bowling_weight?: number
+          bowling_wicket_points?: number
+          bowling_wide_penalty?: number
+          fielding_catch_points?: number
+          fielding_dropped_catch_penalty?: number
+          fielding_runout_points?: number
+          fielding_stumping_points?: number
+          fielding_weight?: number
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seasons: {
         Row: {
           created_at: string
