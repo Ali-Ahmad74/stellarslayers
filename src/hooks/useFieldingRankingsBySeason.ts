@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RankingPlayer, PlayerRole } from '@/types/cricket';
+import { useScoringSettings } from '@/hooks/useScoringSettings';
 
 interface FieldingStats {
   player_id: number;
@@ -18,13 +19,14 @@ interface Player {
 }
 
 // Calculate fielding points for a player's stats
-function calculateFieldingPoints(stats: FieldingStats): number {
+function calculateFieldingPoints(stats: FieldingStats, scoring?: ReturnType<typeof useScoringSettings>["settings"] | null): number {
   let points = 0;
+  const s = scoring ?? ({} as any);
   
-  points += stats.catches * 5; // +5 per catch
-  points += stats.runouts * 7; // +7 per runout
-  points += stats.stumpings * 7; // +7 per stumping
-  points -= stats.dropped_catches * 5; // -5 per dropped catch
+  points += stats.catches * Number(s.fielding_catch_points ?? 5);
+  points += stats.runouts * Number(s.fielding_runout_points ?? 7);
+  points += stats.stumpings * Number(s.fielding_stumping_points ?? 7);
+  points -= stats.dropped_catches * Number(s.fielding_dropped_catch_penalty ?? 5);
   
   return Math.max(0, Math.round(points * 10) / 10);
 }
@@ -33,6 +35,7 @@ export function useFieldingRankingsBySeason(seasonId: string | null) {
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { settings: scoringSettings } = useScoringSettings();
 
   const fetchRankings = useCallback(async () => {
     setLoading(true);
@@ -118,7 +121,7 @@ export function useFieldingRankingsBySeason(seasonId: string | null) {
           id: player.id,
           name: player.name,
           role: player.role,
-          rating: calculateFieldingPoints(stats),
+          rating: calculateFieldingPoints(stats, scoringSettings),
           matches: stats.matches,
           catches: stats.catches,
           runouts: stats.runouts,
@@ -157,6 +160,9 @@ export function useFieldingRankingsBySeason(seasonId: string | null) {
         fetchRankings();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        fetchRankings();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scoring_settings' }, () => {
         fetchRankings();
       })
       .subscribe();

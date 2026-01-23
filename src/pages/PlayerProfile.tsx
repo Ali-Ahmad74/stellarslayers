@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { calculateICCPoints, PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
 import type { PlayerRole } from '@/types/cricket';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 
 interface Player {
   id: number;
@@ -27,6 +29,8 @@ const PlayerProfile = () => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const { settings: scoringSettings } = useScoringSettings();
+  const { teamSettings } = useTeamSettings();
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     const fetchPlayer = async () => {
@@ -139,12 +143,17 @@ const PlayerProfile = () => {
       
       <main className="container py-8">
         {/* Back Button */}
-        <Link to="/">
-          <Button variant="outline" className="mb-6">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Rankings
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Link to="/">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Rankings
+            </Button>
+          </Link>
+          <Button onClick={() => setShareOpen(true)}>
+            Share Player Card
           </Button>
-        </Link>
+        </div>
 
         {/* Player Header */}
         <motion.div
@@ -364,6 +373,16 @@ const PlayerProfile = () => {
           </motion.div>
         </div>
       </main>
+
+      {player && (
+        <SharePlayerCardDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          player={player}
+          teamName={teamSettings?.team_name}
+          scoringSettings={scoringSettings}
+        />
+      )}
     </div>
   );
 };
