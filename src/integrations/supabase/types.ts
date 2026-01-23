@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          details: Json
+          entity: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          entity: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          entity?: string
+          id?: string
+        }
+        Relationships: []
+      }
       batting_inputs: {
         Row: {
           balls: number
@@ -474,6 +501,9 @@ export type Database = {
           team_logo_url: string | null
           team_name: string
           updated_at: string
+          watermark_enabled: boolean
+          watermark_handle: string | null
+          watermark_position: string
         }
         Insert: {
           created_at?: string
@@ -482,6 +512,9 @@ export type Database = {
           team_logo_url?: string | null
           team_name?: string
           updated_at?: string
+          watermark_enabled?: boolean
+          watermark_handle?: string | null
+          watermark_position?: string
         }
         Update: {
           created_at?: string
@@ -490,6 +523,9 @@ export type Database = {
           team_logo_url?: string | null
           team_name?: string
           updated_at?: string
+          watermark_enabled?: boolean
+          watermark_handle?: string | null
+          watermark_position?: string
         }
         Relationships: []
       }
@@ -651,6 +687,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      insert_admin_audit_log: {
+        Args: { p_action: string; p_details: Json; p_entity: string }
+        Returns: undefined
       }
     }
     Enums: {
