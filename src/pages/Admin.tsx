@@ -5,6 +5,7 @@ import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, Calend
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleBadge } from '@/components/RoleBadge';
@@ -13,6 +14,7 @@ import { MatchDialog, MatchFormData } from '@/components/dialogs/MatchDialog';
 import { PerformanceDialog, PerformanceFormData } from '@/components/dialogs/PerformanceDialog';
 import { SeasonDialog, SeasonFormData } from '@/components/dialogs/SeasonDialog';
 import { TournamentDialog, TournamentFormData } from '@/components/dialogs/TournamentDialog';
+import { SeriesDialog, SeriesFormData } from '@/components/dialogs/SeriesDialog';
 import { DeleteConfirmDialog } from '@/components/dialogs/DeleteConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +54,7 @@ interface Match {
   opponent_score: number | null;
   result: string | null;
   tournament_id: number | null;
+  series_id?: number | null;
   created_at: string;
 }
 
@@ -77,6 +80,17 @@ interface Tournament {
   created_at: string;
 }
 
+interface Series {
+  id: number;
+  name: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  venue: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -85,6 +99,7 @@ const Admin = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [series, setSeries] = useState<Series[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('players');
@@ -101,6 +116,7 @@ const Admin = () => {
   const [performanceDialogOpen, setPerformanceDialogOpen] = useState(false);
   const [seasonDialogOpen, setSeasonDialogOpen] = useState(false);
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
+  const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Edit states
@@ -108,7 +124,8 @@ const Admin = () => {
   const [editingMatch, setEditingMatch] = useState<Match | undefined>();
   const [editingSeason, setEditingSeason] = useState<Season | undefined>();
   const [editingTournament, setEditingTournament] = useState<Tournament | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'player' | 'match' | 'season' | 'tournament'; id: number; name: string } | null>(null);
+  const [editingSeries, setEditingSeries] = useState<Series | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'player' | 'match' | 'season' | 'tournament' | 'series'; id: number; name: string } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -150,11 +167,12 @@ const Admin = () => {
   const fetchData = async () => {
     setLoadingData(true);
     
-    const [playersRes, matchesRes, seasonsRes, tournamentsRes, perfRes] = await Promise.all([
+    const [playersRes, matchesRes, seasonsRes, tournamentsRes, seriesRes, perfRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('matches').select('*').order('match_date', { ascending: false }),
       supabase.from('seasons').select('*').order('year', { ascending: false }),
       supabase.from('tournaments').select('*').order('start_date', { ascending: false }),
+      supabase.from('series').select('*').order('is_active', { ascending: false }).order('start_date', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('batting_inputs').select('id').limit(1),
     ]);
     
@@ -162,6 +180,7 @@ const Admin = () => {
     if (matchesRes.data) setMatches(matchesRes.data as Match[]);
     if (seasonsRes.data) setSeasons(seasonsRes.data);
     if (tournamentsRes.data) setTournaments(tournamentsRes.data);
+    if (seriesRes.data) setSeries(seriesRes.data as any);
     setHasAnyPerformance((perfRes.data?.length || 0) > 0);
     
     setLoadingData(false);
@@ -257,6 +276,7 @@ const Admin = () => {
           overs: data.overs,
           venue: data.venue,
           tournament_id: data.tournament_id,
+          series_id: data.series_id,
           opponent_name: data.opponent_name,
           our_score: data.our_score,
           opponent_score: data.opponent_score,
@@ -279,6 +299,7 @@ const Admin = () => {
           overs: data.overs,
           venue: data.venue,
           tournament_id: data.tournament_id,
+          series_id: data.series_id,
           opponent_name: data.opponent_name,
           our_score: data.our_score,
           opponent_score: data.opponent_score,
@@ -419,6 +440,64 @@ const Admin = () => {
     setTournamentDialogOpen(true);
   };
 
+  // Series CRUD
+  const handleSaveSeries = async (data: SeriesFormData) => {
+    setSaving(true);
+
+    if (data.is_active) {
+      await supabase.from('series').update({ is_active: false }).neq('id', data.id || 0);
+    }
+
+    if (data.id) {
+      const { error } = await supabase
+        .from('series')
+        .update({
+          name: data.name,
+          description: data.description,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          venue: data.venue,
+          is_active: data.is_active,
+        })
+        .eq('id', data.id);
+
+      if (error) {
+        toast.error('Failed to update series: ' + error.message);
+      } else {
+        toast.success('Series updated successfully!');
+        setSeriesDialogOpen(false);
+        fetchData();
+      }
+    } else {
+      const { error } = await supabase
+        .from('series')
+        .insert({
+          name: data.name,
+          description: data.description,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          venue: data.venue,
+          is_active: data.is_active,
+        });
+
+      if (error) {
+        toast.error('Failed to add series: ' + error.message);
+      } else {
+        toast.success('Series added successfully!');
+        setSeriesDialogOpen(false);
+        fetchData();
+      }
+    }
+
+    setSaving(false);
+    setEditingSeries(undefined);
+  };
+
+  const handleEditSeries = (s: Series) => {
+    setEditingSeries(s);
+    setSeriesDialogOpen(true);
+  };
+
   const handleSavePerformance = async (data: PerformanceFormData) => {
     setSaving(true);
     
@@ -552,7 +631,7 @@ const Admin = () => {
   };
 
   // Delete
-  const handleDeleteClick = (type: 'player' | 'match' | 'season' | 'tournament', id: number, name: string) => {
+  const handleDeleteClick = (type: 'player' | 'match' | 'season' | 'tournament' | 'series', id: number, name: string) => {
     setDeleteTarget({ type, id, name });
     setDeleteDialogOpen(true);
   };
@@ -562,9 +641,16 @@ const Admin = () => {
     
     setSaving(true);
     
-    const table = deleteTarget.type === 'player' ? 'players' : 
-                  deleteTarget.type === 'match' ? 'matches' : 
-                  deleteTarget.type === 'season' ? 'seasons' : 'tournaments';
+    const table =
+      deleteTarget.type === 'player'
+        ? 'players'
+        : deleteTarget.type === 'match'
+          ? 'matches'
+          : deleteTarget.type === 'season'
+            ? 'seasons'
+            : deleteTarget.type === 'tournament'
+              ? 'tournaments'
+              : 'series';
     const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id);
     
     if (error) {
@@ -741,6 +827,13 @@ const Admin = () => {
               >
                 <Trophy className="w-4 h-4 mr-2" />
                 Tournaments
+              </TabsTrigger>
+              <TabsTrigger 
+                value="series"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                Series
               </TabsTrigger>
               <TabsTrigger 
                 value="performance"
@@ -1037,6 +1130,89 @@ const Admin = () => {
               </Card>
             </TabsContent>
 
+            <TabsContent value="series">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Series Management</CardTitle>
+                    <CardDescription>Create series to group matches and generate highlights</CardDescription>
+                  </div>
+                  {isAdmin && (
+                    <Button onClick={() => { setEditingSeries(undefined); setSeriesDialogOpen(true); }}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Series
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="p-0">
+                  {loadingData ? (
+                    <div className="p-8 text-center text-muted-foreground">Loading series...</div>
+                  ) : series.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Trophy className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No series yet.</p>
+                      {isAdmin && <p className="text-sm mt-2">Create a series to organize your matches!</p>}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Venue</TableHead>
+                            <TableHead>Dates</TableHead>
+                            <TableHead>Matches</TableHead>
+                            <TableHead>Status</TableHead>
+                            {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {series.map((s) => {
+                            const matchCount = matches.filter((m) => Number(m.series_id) === Number(s.id)).length;
+                            const dateLabel =
+                              s.start_date && s.end_date
+                                ? `${new Date(s.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(
+                                    s.end_date
+                                  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                : '-';
+                            return (
+                              <TableRow key={s.id} className="hover:bg-muted/30">
+                                <TableCell className="font-semibold">{s.name}</TableCell>
+                                <TableCell className="text-muted-foreground">{s.venue || '-'}</TableCell>
+                                <TableCell className="whitespace-nowrap text-sm">{dateLabel}</TableCell>
+                                <TableCell>
+                                  <span className="inline-flex">
+                                    <span className="sr-only">Matches: </span>
+                                    <span className="text-xs text-muted-foreground tabular-nums">{matchCount}</span>
+                                    <span className="text-xs text-muted-foreground ml-1">{matchCount === 1 ? 'match' : 'matches'}</span>
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  {s.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                                </TableCell>
+                                {isAdmin && (
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button variant="ghost" size="icon" onClick={() => handleEditSeries(s)}>
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick('series', s.id, s.name)}>
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="performance">
               <div className="space-y-4">
                 <Card>
@@ -1246,6 +1422,15 @@ const Admin = () => {
         onSave={handleSaveMatch}
         match={editingMatch}
         tournaments={tournaments.map(t => ({ id: t.id, name: t.name }))}
+        seriesOptions={series.map(s => ({ id: s.id, name: s.name }))}
+        isLoading={saving}
+      />
+
+      <SeriesDialog
+        open={seriesDialogOpen}
+        onOpenChange={(open) => { setSeriesDialogOpen(open); if (!open) setEditingSeries(undefined); }}
+        onSave={handleSaveSeries}
+        series={editingSeries}
         isLoading={saving}
       />
 
