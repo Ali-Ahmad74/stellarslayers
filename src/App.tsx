@@ -16,6 +16,8 @@ import MatchHistory from "./pages/MatchHistory";
 import Dashboard from "./pages/Dashboard";
 import TeamProfile from "./pages/TeamProfile";
 import NotFound from "./pages/NotFound";
+import SeriesList from "./pages/SeriesList";
+import SeriesDetail from "./pages/SeriesDetail";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/stats" element={<Stats />} />
+            <Route path="/series" element={<SeriesList />} />
+            <Route path="/series/:id" element={<SeriesDetail />} />
             <Route path="/matches" element={<MatchHistory />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/team" element={<TeamProfile />} />

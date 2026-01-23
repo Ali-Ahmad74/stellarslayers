@@ -11,6 +11,10 @@ const navItems = [{
   label: 'Leaderboard',
   icon: Medal
 }, {
+  path: '/series',
+  label: 'Series',
+  icon: Trophy
+}, {
   path: '/compare',
   label: 'Compare',
   icon: GitCompare
