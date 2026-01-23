@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays } from 'lucide-react';
+import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays, Trophy, Info } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleBadge } from '@/components/RoleBadge';
@@ -12,11 +12,18 @@ import { PlayerDialog, PlayerFormData } from '@/components/dialogs/PlayerDialog'
 import { MatchDialog, MatchFormData } from '@/components/dialogs/MatchDialog';
 import { PerformanceDialog, PerformanceFormData } from '@/components/dialogs/PerformanceDialog';
 import { SeasonDialog, SeasonFormData } from '@/components/dialogs/SeasonDialog';
+import { TournamentDialog, TournamentFormData } from '@/components/dialogs/TournamentDialog';
 import { DeleteConfirmDialog } from '@/components/dialogs/DeleteConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlayerRole } from '@/types/cricket';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 interface Player {
   id: number;
   name: string;
@@ -36,6 +43,7 @@ interface Match {
   our_score: number | null;
   opponent_score: number | null;
   result: string | null;
+  tournament_id: number | null;
   created_at: string;
 }
 
@@ -49,6 +57,18 @@ interface Season {
   created_at: string;
 }
 
+interface Tournament {
+  id: number;
+  name: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  venue: string | null;
+  tournament_type: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -56,6 +76,7 @@ const Admin = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -64,13 +85,15 @@ const Admin = () => {
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
   const [performanceDialogOpen, setPerformanceDialogOpen] = useState(false);
   const [seasonDialogOpen, setSeasonDialogOpen] = useState(false);
+  const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Edit states
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
   const [editingMatch, setEditingMatch] = useState<Match | undefined>();
   const [editingSeason, setEditingSeason] = useState<Season | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'player' | 'match' | 'season'; id: number; name: string } | null>(null);
+  const [editingTournament, setEditingTournament] = useState<Tournament | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'player' | 'match' | 'season' | 'tournament'; id: number; name: string } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -87,15 +110,17 @@ const Admin = () => {
   const fetchData = async () => {
     setLoadingData(true);
     
-    const [playersRes, matchesRes, seasonsRes] = await Promise.all([
+    const [playersRes, matchesRes, seasonsRes, tournamentsRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('matches').select('*').order('match_date', { ascending: false }),
       supabase.from('seasons').select('*').order('year', { ascending: false }),
+      supabase.from('tournaments').select('*').order('start_date', { ascending: false }),
     ]);
     
     if (playersRes.data) setPlayers(playersRes.data);
-    if (matchesRes.data) setMatches(matchesRes.data);
+    if (matchesRes.data) setMatches(matchesRes.data as Match[]);
     if (seasonsRes.data) setSeasons(seasonsRes.data);
+    if (tournamentsRes.data) setTournaments(tournamentsRes.data);
     
     setLoadingData(false);
   };
@@ -217,7 +242,6 @@ const Admin = () => {
   const handleSaveSeason = async (data: SeasonFormData) => {
     setSaving(true);
     
-    // If marking as active, deactivate other seasons first
     if (data.is_active) {
       await supabase.from('seasons').update({ is_active: false }).neq('id', data.id || 0);
     }
@@ -269,13 +293,73 @@ const Admin = () => {
     setEditingSeason(season);
     setSeasonDialogOpen(true);
   };
+
+  // Tournament CRUD
+  const handleSaveTournament = async (data: TournamentFormData) => {
+    setSaving(true);
+    
+    if (data.is_active) {
+      await supabase.from('tournaments').update({ is_active: false }).neq('id', data.id || 0);
+    }
+    
+    if (data.id) {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          name: data.name,
+          description: data.description,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          venue: data.venue,
+          tournament_type: data.tournament_type,
+          is_active: data.is_active,
+        })
+        .eq('id', data.id);
+      
+      if (error) {
+        toast.error('Failed to update tournament: ' + error.message);
+      } else {
+        toast.success('Tournament updated successfully!');
+        setTournamentDialogOpen(false);
+        fetchData();
+      }
+    } else {
+      const { error } = await supabase
+        .from('tournaments')
+        .insert({
+          name: data.name,
+          description: data.description,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          venue: data.venue,
+          tournament_type: data.tournament_type,
+          is_active: data.is_active,
+        });
+      
+      if (error) {
+        toast.error('Failed to add tournament: ' + error.message);
+      } else {
+        toast.success('Tournament added successfully!');
+        setTournamentDialogOpen(false);
+        fetchData();
+      }
+    }
+    
+    setSaving(false);
+    setEditingTournament(undefined);
+  };
+
+  const handleEditTournament = (tournament: Tournament) => {
+    setEditingTournament(tournament);
+    setTournamentDialogOpen(true);
+  };
+
   const handleSavePerformance = async (data: PerformanceFormData) => {
     setSaving(true);
     
     try {
       const errors: string[] = [];
       
-      // Handle batting - check existing first, then insert or update
       if (data.batting.balls > 0 || data.batting.runs > 0) {
         const { data: existing } = await supabase
           .from('batting_inputs')
@@ -312,7 +396,6 @@ const Admin = () => {
         }
       }
       
-      // Handle bowling - check existing first, then insert or update
       if (data.bowling.balls > 0) {
         const { data: existing } = await supabase
           .from('bowling_inputs')
@@ -355,7 +438,6 @@ const Admin = () => {
         }
       }
       
-      // Handle fielding - check existing first, then insert or update
       if (data.fielding.catches > 0 || data.fielding.runouts > 0 || data.fielding.stumpings > 0 || data.fielding.dropped_catches > 0) {
         const { data: existing } = await supabase
           .from('fielding_inputs')
@@ -398,7 +480,6 @@ const Admin = () => {
       }
     } catch (err) {
       toast.error('Failed to save performance data');
-      // Error logged only in development to prevent information leakage
       if (import.meta.env.DEV) console.error(err);
     }
     
@@ -406,7 +487,7 @@ const Admin = () => {
   };
 
   // Delete
-  const handleDeleteClick = (type: 'player' | 'match' | 'season', id: number, name: string) => {
+  const handleDeleteClick = (type: 'player' | 'match' | 'season' | 'tournament', id: number, name: string) => {
     setDeleteTarget({ type, id, name });
     setDeleteDialogOpen(true);
   };
@@ -416,13 +497,15 @@ const Admin = () => {
     
     setSaving(true);
     
-    const table = deleteTarget.type === 'player' ? 'players' : deleteTarget.type === 'match' ? 'matches' : 'seasons';
+    const table = deleteTarget.type === 'player' ? 'players' : 
+                  deleteTarget.type === 'match' ? 'matches' : 
+                  deleteTarget.type === 'season' ? 'seasons' : 'tournaments';
     const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id);
     
     if (error) {
       toast.error(`Failed to delete ${deleteTarget.type}: ` + error.message);
     } else {
-      const typeLabel = deleteTarget.type === 'player' ? 'Player' : deleteTarget.type === 'match' ? 'Match' : 'Season';
+      const typeLabel = deleteTarget.type.charAt(0).toUpperCase() + deleteTarget.type.slice(1);
       toast.success(`${typeLabel} deleted successfully!`);
       fetchData();
     }
@@ -444,6 +527,11 @@ const Admin = () => {
     return null;
   }
 
+  const getTournamentName = (tournamentId: number | null) => {
+    if (!tournamentId) return null;
+    return tournaments.find(t => t.id === tournamentId)?.name || null;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -453,20 +541,69 @@ const Admin = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-                ⚙️ Admin Panel
+                Admin Panel
               </h1>
               <p className="text-muted-foreground mt-1">
-                {isAdmin ? 'Manage players, matches, and performance data' : 'View-only access (Admin role required for editing)'}
+                {isAdmin ? 'Manage players, matches, tournaments, and performance data' : 'View-only access (Admin role required for editing)'}
               </p>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={handleSignOut} className="gap-2">
+              <LogOut className="w-4 h-4" />
               Sign Out
             </Button>
           </div>
+
+          {/* Getting Started Guide for new admins */}
+          {isAdmin && players.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Info className="w-5 h-5 text-primary" />
+                    Getting Started Guide
+                  </CardTitle>
+                  <CardDescription>
+                    Follow these steps to set up your cricket ranking system
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-3 text-sm">
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+                      <div>
+                        <strong>Add Players</strong> - Start by adding your team members with their roles (Batsman, Bowler, etc.)
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
+                      <div>
+                        <strong>Create a Season</strong> - Set up your current season to organize matches
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/60 text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
+                      <div>
+                        <strong>Add Matches</strong> - Record your matches with opponents and scores
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/40 text-primary-foreground flex items-center justify-center text-xs font-bold">4</span>
+                      <div>
+                        <strong>Enter Performance Data</strong> - Add batting, bowling, and fielding stats for each player per match
+                      </div>
+                    </li>
+                  </ol>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {!isAdmin && (
             <Card className="mb-8 border-amber-500/50 bg-amber-500/10">
@@ -479,23 +616,24 @@ const Admin = () => {
           )}
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             {[
               { icon: Users, label: 'Players', value: players.length, color: 'bg-blue-500' },
               { icon: Calendar, label: 'Matches', value: matches.length, color: 'bg-emerald-500' },
+              { icon: Trophy, label: 'Tournaments', value: tournaments.length, color: 'bg-purple-500' },
               { icon: CalendarDays, label: 'Seasons', value: seasons.length, color: 'bg-amber-500' },
-              { icon: Settings, label: 'Status', value: isAdmin ? 'Admin' : 'Viewer', color: 'bg-purple-500' },
+              { icon: Settings, label: 'Status', value: isAdmin ? 'Admin' : 'Viewer', color: 'bg-cyan-500' },
             ].map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
               >
-                <Card>
+                <Card className="hover:shadow-lg transition-shadow">
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className={`${stat.color} p-3 rounded-xl text-white`}>
-                      <stat.icon className="w-6 h-6" />
+                      <stat.icon className="w-5 h-5" />
                     </div>
                     <div>
                       <p className="text-2xl font-bold font-display">{stat.value}</p>
@@ -508,31 +646,38 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="players" className="w-full">
-            <TabsList className="w-full justify-start mb-6 bg-card border shadow-sm rounded-xl p-1 h-auto flex-wrap">
+            <TabsList className="w-full justify-start mb-6 bg-card border border-border shadow-md rounded-xl p-1.5 h-auto flex-wrap gap-1">
               <TabsTrigger 
                 value="players" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-3 rounded-lg font-semibold"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
               >
                 <Users className="w-4 h-4 mr-2" />
                 Players
               </TabsTrigger>
               <TabsTrigger 
                 value="matches"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-3 rounded-lg font-semibold"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 Matches
               </TabsTrigger>
               <TabsTrigger 
+                value="tournaments"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                Tournaments
+              </TabsTrigger>
+              <TabsTrigger 
                 value="performance"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-3 rounded-lg font-semibold"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
               >
                 <Activity className="w-4 h-4 mr-2" />
                 Performance
               </TabsTrigger>
               <TabsTrigger 
                 value="seasons"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-3 rounded-lg font-semibold"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
               >
                 <CalendarDays className="w-4 h-4 mr-2" />
                 Seasons
@@ -540,9 +685,12 @@ const Admin = () => {
             </TabsList>
 
             <TabsContent value="players">
-              <Card variant="elevated">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Player Management</CardTitle>
+                  <div>
+                    <CardTitle>Player Management</CardTitle>
+                    <CardDescription>Add and manage your team's players</CardDescription>
+                  </div>
                   {isAdmin && (
                     <Button onClick={() => { setEditingPlayer(undefined); setPlayerDialogOpen(true); }}>
                       <Plus className="w-4 h-4 mr-2" />
@@ -555,7 +703,9 @@ const Admin = () => {
                     <div className="p-8 text-center text-muted-foreground">Loading players...</div>
                   ) : players.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                      No players yet. {isAdmin && 'Add your first player to get started!'}
+                      <Users className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No players yet.</p>
+                      {isAdmin && <p className="text-sm mt-2">Click "Add Player" to get started!</p>}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -573,20 +723,30 @@ const Admin = () => {
                         <TableBody>
                           {players.map((player) => (
                             <TableRow key={player.id} className="hover:bg-muted/30">
-                              <TableCell className="font-mono">{player.id}</TableCell>
+                              <TableCell className="font-mono text-xs">{player.id}</TableCell>
                               <TableCell className="font-semibold">{player.name}</TableCell>
                               <TableCell><RoleBadge role={player.role as PlayerRole} size="sm" /></TableCell>
-                              <TableCell>{player.batting_style || '-'}</TableCell>
-                              <TableCell>{player.bowling_style || '-'}</TableCell>
+                              <TableCell className="text-muted-foreground">{player.batting_style || '-'}</TableCell>
+                              <TableCell className="text-muted-foreground">{player.bowling_style || '-'}</TableCell>
                               {isAdmin && (
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditPlayer(player)}>
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick('player', player.id, player.name)}>
-                                      <Trash2 className="w-4 h-4 text-destructive" />
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => handleEditPlayer(player)}>
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Edit player</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick('player', player.id, player.name)}>
+                                          <Trash2 className="w-4 h-4 text-destructive" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete player</TooltipContent>
+                                    </Tooltip>
                                   </div>
                                 </TableCell>
                               )}
@@ -601,9 +761,12 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="matches">
-              <Card variant="elevated">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Match Management</CardTitle>
+                  <div>
+                    <CardTitle>Match Management</CardTitle>
+                    <CardDescription>Record and manage your matches</CardDescription>
+                  </div>
                   {isAdmin && (
                     <Button onClick={() => { setEditingMatch(undefined); setMatchDialogOpen(true); }}>
                       <Plus className="w-4 h-4 mr-2" />
@@ -616,7 +779,9 @@ const Admin = () => {
                     <div className="p-8 text-center text-muted-foreground">Loading matches...</div>
                   ) : matches.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                      No matches yet. {isAdmin && 'Add your first match to get started!'}
+                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No matches yet.</p>
+                      {isAdmin && <p className="text-sm mt-2">Click "Add Match" to record your first game!</p>}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -625,7 +790,7 @@ const Admin = () => {
                           <TableRow className="bg-muted/50">
                             <TableHead>Date</TableHead>
                             <TableHead>Opponent</TableHead>
-                            <TableHead>Venue</TableHead>
+                            <TableHead>Tournament</TableHead>
                             <TableHead>Score</TableHead>
                             <TableHead>Result</TableHead>
                             <TableHead>Overs</TableHead>
@@ -635,7 +800,7 @@ const Admin = () => {
                         <TableBody>
                           {matches.map((match) => (
                             <TableRow key={match.id} className="hover:bg-muted/30">
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 {new Date(match.match_date).toLocaleDateString('en-US', {
                                   year: 'numeric',
                                   month: 'short',
@@ -643,7 +808,15 @@ const Admin = () => {
                                 })}
                               </TableCell>
                               <TableCell className="font-semibold">{match.opponent_name || '-'}</TableCell>
-                              <TableCell>{match.venue || '-'}</TableCell>
+                              <TableCell>
+                                {getTournamentName(match.tournament_id) ? (
+                                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                                    {getTournamentName(match.tournament_id)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
                               <TableCell>
                                 {match.our_score !== null && match.opponent_score !== null 
                                   ? `${match.our_score} - ${match.opponent_score}` 
@@ -683,10 +856,106 @@ const Admin = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="performance">
-              <Card variant="elevated">
+            <TabsContent value="tournaments">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Player Performance Entry</CardTitle>
+                  <div>
+                    <CardTitle>Tournament Management</CardTitle>
+                    <CardDescription>Create tournaments to group your matches</CardDescription>
+                  </div>
+                  {isAdmin && (
+                    <Button onClick={() => { setEditingTournament(undefined); setTournamentDialogOpen(true); }}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Tournament
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="p-0">
+                  {loadingData ? (
+                    <div className="p-8 text-center text-muted-foreground">Loading tournaments...</div>
+                  ) : tournaments.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Trophy className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No tournaments yet.</p>
+                      {isAdmin && <p className="text-sm mt-2">Create a tournament to organize your matches!</p>}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Venue</TableHead>
+                            <TableHead>Dates</TableHead>
+                            <TableHead>Matches</TableHead>
+                            <TableHead>Status</TableHead>
+                            {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tournaments.map((tournament) => {
+                            const matchCount = matches.filter(m => m.tournament_id === tournament.id).length;
+                            return (
+                              <TableRow key={tournament.id} className="hover:bg-muted/30">
+                                <TableCell className="font-semibold">{tournament.name}</TableCell>
+                                <TableCell className="capitalize">{tournament.tournament_type || 'League'}</TableCell>
+                                <TableCell className="text-muted-foreground">{tournament.venue || '-'}</TableCell>
+                                <TableCell className="whitespace-nowrap text-sm">
+                                  {tournament.start_date && tournament.end_date ? (
+                                    <>
+                                      {new Date(tournament.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      {' - '}
+                                      {new Date(tournament.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-muted">
+                                    {matchCount} {matchCount === 1 ? 'match' : 'matches'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  {tournament.is_active ? (
+                                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                      Active
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
+                                      Inactive
+                                    </span>
+                                  )}
+                                </TableCell>
+                                {isAdmin && (
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button variant="ghost" size="icon" onClick={() => handleEditTournament(tournament)}>
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick('tournament', tournament.id, tournament.name)}>
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="performance">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Player Performance Entry</CardTitle>
+                    <CardDescription>Record batting, bowling, and fielding stats for each match</CardDescription>
+                  </div>
                   {isAdmin && (
                     <Button onClick={() => setPerformanceDialogOpen(true)} disabled={players.length === 0 || matches.length === 0}>
                       <Plus className="w-4 h-4 mr-2" />
@@ -697,12 +966,17 @@ const Admin = () => {
                 <CardContent>
                   {players.length === 0 || matches.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                      You need at least one player and one match to add performance data.
+                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>You need at least one player and one match to add performance data.</p>
+                      <p className="text-sm mt-2">
+                        {players.length === 0 ? 'Start by adding players.' : 'Start by adding a match.'}
+                      </p>
                     </div>
                   ) : (
                     <div className="p-8 text-center text-muted-foreground">
-                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Click "Add Performance" to record batting, bowling, and fielding stats for a player in a match.</p>
+                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p className="font-medium">Ready to record performance!</p>
+                      <p className="text-sm mt-2">Click "Add Performance" to record batting, bowling, and fielding stats for a player in a match.</p>
                     </div>
                   )}
                 </CardContent>
@@ -710,9 +984,12 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="seasons">
-              <Card variant="elevated">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Season Management</CardTitle>
+                  <div>
+                    <CardTitle>Season Management</CardTitle>
+                    <CardDescription>Organize matches by season</CardDescription>
+                  </div>
                   {isAdmin && (
                     <Button onClick={() => { setEditingSeason(undefined); setSeasonDialogOpen(true); }}>
                       <Plus className="w-4 h-4 mr-2" />
@@ -725,7 +1002,9 @@ const Admin = () => {
                     <div className="p-8 text-center text-muted-foreground">Loading seasons...</div>
                   ) : seasons.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
-                      No seasons yet. {isAdmin && 'Add your first season to get started!'}
+                      <CalendarDays className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No seasons yet.</p>
+                      {isAdmin && <p className="text-sm mt-2">Create a season to organize your matches!</p>}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -825,11 +1104,19 @@ const Admin = () => {
         isLoading={saving}
       />
 
+      <TournamentDialog
+        open={tournamentDialogOpen}
+        onOpenChange={(open) => { setTournamentDialogOpen(open); if (!open) setEditingTournament(undefined); }}
+        onSave={handleSaveTournament}
+        tournament={editingTournament}
+        saving={saving}
+      />
+
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title={`Delete ${deleteTarget?.type === 'player' ? 'Player' : deleteTarget?.type === 'match' ? 'Match' : 'Season'}?`}
+        title={`Delete ${deleteTarget?.type ? deleteTarget.type.charAt(0).toUpperCase() + deleteTarget.type.slice(1) : ''}?`}
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         isLoading={saving}
       />
