@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Calendar, MapPin, Trophy, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Loader2, Calendar, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { SeasonFilter } from '@/components/SeasonFilter';
 import { HeadToHead } from '@/components/HeadToHead';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SiteFooter } from '@/components/SiteFooter';
+import { MatchScorecard } from '@/components/MatchScorecard';
 import {
   Select,
   SelectContent,
@@ -31,9 +30,16 @@ interface Match {
   result: string | null;
   tournament_id?: number | null;
   tournaments?: { name: string } | null;
+  series_id?: number | null;
+  series?: { name: string } | null;
 }
 
 interface TournamentOption {
+  id: number;
+  name: string;
+}
+
+interface SeriesOption {
   id: number;
   name: string;
 }
@@ -70,15 +76,12 @@ interface FieldingScorecard {
 const MatchHistory = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
+  const [seriesOptions, setSeriesOptions] = useState<SeriesOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [scorecardLoading, setScorecardLoading] = useState(false);
-  const [battingScorecard, setBattingScorecard] = useState<BattingScorecard[]>([]);
-  const [bowlingScorecard, setBowlingScorecard] = useState<BowlingScorecard[]>([]);
-  const [fieldingScorecard, setFieldingScorecard] = useState<FieldingScorecard[]>([]);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('all');
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string>('all');
 
   // Get unique years from matches
   const years = useMemo(() => {
@@ -93,127 +96,66 @@ const MatchHistory = () => {
       list = list.filter(m => new Date(m.match_date).getFullYear().toString() === selectedYear);
     }
 
-    if (selectedTournamentId === 'all') return list;
-    if (selectedTournamentId === 'none') {
-      return list.filter((m) => !m.tournament_id);
+    if (selectedTournamentId !== 'all') {
+      if (selectedTournamentId === 'none') {
+        list = list.filter((m) => !m.tournament_id);
+      } else {
+        const tid = Number(selectedTournamentId);
+        list = list.filter((m) => Number(m.tournament_id) === tid);
+      }
     }
 
-    const tid = Number(selectedTournamentId);
-    return list.filter((m) => Number(m.tournament_id) === tid);
-  }, [matches, selectedYear, selectedTournamentId]);
+    if (selectedSeriesId !== 'all') {
+      if (selectedSeriesId === 'none') {
+        list = list.filter((m) => !m.series_id);
+      } else {
+        const sid = Number(selectedSeriesId);
+        list = list.filter((m) => Number(m.series_id) === sid);
+      }
+    }
+
+    return list;
+  }, [matches, selectedYear, selectedTournamentId, selectedSeriesId]);
 
   const fetchMatches = async () => {
-    const [{ data: matchesData }, { data: tournamentsData }] = await Promise.all([
+    const [{ data: matchesData }, { data: tournamentsData }, { data: seriesData }] = await Promise.all([
       supabase
-      .from('matches')
-      .select('*, tournaments(name)')
-      .order('match_date', { ascending: false }),
+        .from('matches')
+        .select('*, tournaments(name), series(name)')
+        .order('match_date', { ascending: false }),
       supabase
         .from('tournaments')
+        .select('id, name')
+        .order('start_date', { ascending: false }),
+      supabase
+        .from('series')
         .select('id, name')
         .order('start_date', { ascending: false }),
     ]);
 
     setMatches((matchesData as any) || []);
     setTournaments((tournamentsData as any) || []);
+    setSeriesOptions((seriesData as any) || []);
     setLoading(false);
-  };
-
-  const fetchScorecard = async (matchId: number) => {
-    setScorecardLoading(true);
-    
-    // Fetch batting data with player names
-    const { data: battingData } = await supabase
-      .from('batting_inputs')
-      .select('*, players(name)')
-      .eq('match_id', matchId)
-      .order('runs', { ascending: false });
-
-    // Fetch bowling data with player names
-    const { data: bowlingData } = await supabase
-      .from('bowling_inputs')
-      .select('*, players(name)')
-      .eq('match_id', matchId)
-      .order('wickets', { ascending: false });
-
-    // Fetch fielding data with player names
-    const { data: fieldingData } = await supabase
-      .from('fielding_inputs')
-      .select('*, players(name)')
-      .eq('match_id', matchId);
-
-    setBattingScorecard(
-      (battingData || []).map((b: any) => ({
-        player_id: b.player_id,
-        player_name: b.players?.name || 'Unknown',
-        runs: b.runs,
-        balls: b.balls,
-        fours: b.fours,
-        sixes: b.sixes,
-        out: b.out,
-      }))
-    );
-
-    setBowlingScorecard(
-      (bowlingData || []).map((b: any) => ({
-        player_id: b.player_id,
-        player_name: b.players?.name || 'Unknown',
-        balls: b.balls,
-        runs_conceded: b.runs_conceded,
-        wickets: b.wickets,
-        maidens: b.maidens,
-        wides: b.wides,
-        no_balls: b.no_balls,
-      }))
-    );
-
-    setFieldingScorecard(
-      (fieldingData || [])
-        .filter((f: any) => f.catches > 0 || f.runouts > 0 || f.stumpings > 0)
-        .map((f: any) => ({
-          player_id: f.player_id,
-          player_name: f.players?.name || 'Unknown',
-          catches: f.catches,
-          runouts: f.runouts,
-          stumpings: f.stumpings,
-        }))
-    );
-
-    setScorecardLoading(false);
   };
 
   useEffect(() => {
     fetchMatches();
   }, []);
 
-  const handleViewScorecard = async (match: Match) => {
-    setSelectedMatch(match);
-    await fetchScorecard(match.id);
-  };
-
   const toggleExpand = async (matchId: number) => {
     if (expandedMatchId === matchId) {
       setExpandedMatchId(null);
     } else {
       setExpandedMatchId(matchId);
-      await fetchScorecard(matchId);
     }
   };
 
-  const getResultColor = (result: string | null) => {
-    switch (result) {
-      case 'Won': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
-      case 'Lost': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      case 'Tied': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-      case 'Draw': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const formatOvers = (balls: number) => {
-    const overs = Math.floor(balls / 6);
-    const remainingBalls = balls % 6;
-    return remainingBalls > 0 ? `${overs}.${remainingBalls}` : `${overs}`;
+  const resultBadgeVariant = (result: string | null) => {
+    if (!result) return 'secondary' as const;
+    if (result === 'Won') return 'default' as const;
+    if (result === 'Lost') return 'destructive' as const;
+    return 'secondary' as const;
   };
 
   if (loading) {
@@ -276,8 +218,31 @@ const MatchHistory = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Series</span>
+              <Select value={selectedSeriesId} onValueChange={setSelectedSeriesId}>
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="All series" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All series</SelectItem>
+                  <SelectItem value="none">No series</SelectItem>
+                  {seriesOptions.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {selectedTournamentId !== 'all' && (
               <Button variant="outline" size="sm" onClick={() => setSelectedTournamentId('all')}>
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
+            {selectedSeriesId !== 'all' && (
+              <Button variant="outline" size="sm" onClick={() => setSelectedSeriesId('all')}>
                 <X className="w-4 h-4 mr-2" />
                 Clear
               </Button>
@@ -358,6 +323,11 @@ const MatchHistory = () => {
                               </Badge>
                             </div>
                           )}
+                          {match.series?.name && (
+                            <div className="mt-2">
+                              <Badge variant="outline">{match.series.name}</Badge>
+                            </div>
+                          )}
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
@@ -388,7 +358,7 @@ const MatchHistory = () => {
                           </div>
                         )}
                         {match.result && (
-                          <Badge className={getResultColor(match.result)}>
+                          <Badge variant={resultBadgeVariant(match.result)}>
                             {match.result}
                           </Badge>
                         )}
@@ -411,128 +381,7 @@ const MatchHistory = () => {
                         transition={{ duration: 0.3 }}
                         className="border-t"
                       >
-                        {scorecardLoading ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                          </div>
-                        ) : (
-                          <div className="p-4 space-y-6">
-                            {match.tournament_id && match.tournaments?.name && (
-                              <div className="flex items-center justify-between">
-                                <div className="text-sm text-muted-foreground">Tournament</div>
-                                <Badge variant="secondary">{match.tournaments.name}</Badge>
-                              </div>
-                            )}
-                            {/* Batting Scorecard */}
-                            {battingScorecard.length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                  🏏 Batting Scorecard
-                                </h4>
-                                <div className="overflow-x-auto">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Player</TableHead>
-                                        <TableHead className="text-center">R</TableHead>
-                                        <TableHead className="text-center">B</TableHead>
-                                        <TableHead className="text-center">4s</TableHead>
-                                        <TableHead className="text-center">6s</TableHead>
-                                        <TableHead className="text-center">SR</TableHead>
-                                        <TableHead className="text-center">Status</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {battingScorecard.map((b) => (
-                                        <TableRow key={b.player_id}>
-                                          <TableCell className="font-medium">{b.player_name}</TableCell>
-                                          <TableCell className="text-center font-bold">{b.runs}</TableCell>
-                                          <TableCell className="text-center">{b.balls}</TableCell>
-                                          <TableCell className="text-center">{b.fours}</TableCell>
-                                          <TableCell className="text-center">{b.sixes}</TableCell>
-                                          <TableCell className="text-center">
-                                            {b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0'}
-                                          </TableCell>
-                                          <TableCell className="text-center">
-                                            <Badge variant={b.out ? 'destructive' : 'secondary'}>
-                                              {b.out ? 'Out' : 'Not Out'}
-                                            </Badge>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Bowling Scorecard */}
-                            {bowlingScorecard.length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                  🎯 Bowling Scorecard
-                                </h4>
-                                <div className="overflow-x-auto">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Player</TableHead>
-                                        <TableHead className="text-center">O</TableHead>
-                                        <TableHead className="text-center">M</TableHead>
-                                        <TableHead className="text-center">R</TableHead>
-                                        <TableHead className="text-center">W</TableHead>
-                                        <TableHead className="text-center">Econ</TableHead>
-                                        <TableHead className="text-center">Extras</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {bowlingScorecard.map((b) => (
-                                        <TableRow key={b.player_id}>
-                                          <TableCell className="font-medium">{b.player_name}</TableCell>
-                                          <TableCell className="text-center">{formatOvers(b.balls)}</TableCell>
-                                          <TableCell className="text-center">{b.maidens}</TableCell>
-                                          <TableCell className="text-center">{b.runs_conceded}</TableCell>
-                                          <TableCell className="text-center font-bold">{b.wickets}</TableCell>
-                                          <TableCell className="text-center">
-                                            {b.balls > 0 ? ((b.runs_conceded / (b.balls / 6))).toFixed(2) : '0.00'}
-                                          </TableCell>
-                                          <TableCell className="text-center text-muted-foreground">
-                                            {b.wides + b.no_balls > 0 ? `${b.wides}wd, ${b.no_balls}nb` : '-'}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Fielding Highlights */}
-                            {fieldingScorecard.length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                  🧤 Fielding Highlights
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {fieldingScorecard.map((f) => (
-                                    <Badge key={f.player_id} variant="outline" className="py-2 px-3">
-                                      {f.player_name}: 
-                                      {f.catches > 0 && ` ${f.catches}c`}
-                                      {f.runouts > 0 && ` ${f.runouts}ro`}
-                                      {f.stumpings > 0 && ` ${f.stumpings}st`}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {battingScorecard.length === 0 && bowlingScorecard.length === 0 && (
-                              <p className="text-center text-muted-foreground py-4">
-                                No detailed scorecard available for this match
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        <MatchScorecard matchId={match.id} />
                       </motion.div>
                     )}
                   </AnimatePresence>
