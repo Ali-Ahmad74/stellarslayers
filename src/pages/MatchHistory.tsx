@@ -12,6 +12,13 @@ import { SeasonFilter } from '@/components/SeasonFilter';
 import { HeadToHead } from '@/components/HeadToHead';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SiteFooter } from '@/components/SiteFooter';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Match {
   id: number;
@@ -22,6 +29,13 @@ interface Match {
   our_score: number | null;
   opponent_score: number | null;
   result: string | null;
+  tournament_id?: number | null;
+  tournaments?: { name: string } | null;
+}
+
+interface TournamentOption {
+  id: number;
+  name: string;
 }
 
 interface BattingScorecard {
@@ -55,6 +69,7 @@ interface FieldingScorecard {
 
 const MatchHistory = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [scorecardLoading, setScorecardLoading] = useState(false);
@@ -63,6 +78,7 @@ const MatchHistory = () => {
   const [fieldingScorecard, setFieldingScorecard] = useState<FieldingScorecard[]>([]);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>('all');
 
   // Get unique years from matches
   const years = useMemo(() => {
@@ -72,16 +88,34 @@ const MatchHistory = () => {
 
   // Filter matches by selected year
   const filteredMatches = useMemo(() => {
-    if (selectedYear === 'all') return matches;
-    return matches.filter(m => new Date(m.match_date).getFullYear().toString() === selectedYear);
-  }, [matches, selectedYear]);
+    let list = matches;
+    if (selectedYear !== 'all') {
+      list = list.filter(m => new Date(m.match_date).getFullYear().toString() === selectedYear);
+    }
+
+    if (selectedTournamentId === 'all') return list;
+    if (selectedTournamentId === 'none') {
+      return list.filter((m) => !m.tournament_id);
+    }
+
+    const tid = Number(selectedTournamentId);
+    return list.filter((m) => Number(m.tournament_id) === tid);
+  }, [matches, selectedYear, selectedTournamentId]);
 
   const fetchMatches = async () => {
-    const { data } = await supabase
+    const [{ data: matchesData }, { data: tournamentsData }] = await Promise.all([
+      supabase
       .from('matches')
-      .select('*')
-      .order('match_date', { ascending: false });
-    setMatches(data || []);
+      .select('*, tournaments(name)')
+      .order('match_date', { ascending: false }),
+      supabase
+        .from('tournaments')
+        .select('id, name')
+        .order('start_date', { ascending: false }),
+    ]);
+
+    setMatches((matchesData as any) || []);
+    setTournaments((tournamentsData as any) || []);
     setLoading(false);
   };
 
@@ -224,6 +258,32 @@ const MatchHistory = () => {
             />
           </div>
 
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Tournament</span>
+              <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="All tournaments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All tournaments</SelectItem>
+                  <SelectItem value="none">No tournament</SelectItem>
+                  {tournaments.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedTournamentId !== 'all' && (
+              <Button variant="outline" size="sm" onClick={() => setSelectedTournamentId('all')}>
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
+          </div>
+
           <TabsContent value="matches" className="space-y-6">
             {/* Match Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -291,6 +351,13 @@ const MatchHistory = () => {
                           <h3 className="font-semibold text-lg">
                             {match.opponent_name ? `vs ${match.opponent_name}` : 'Match'}
                           </h3>
+                          {(match.tournaments?.name || (!match.tournament_id && selectedTournamentId !== 'all')) && (
+                            <div className="mt-1">
+                              <Badge variant="secondary">
+                                {match.tournament_id ? match.tournaments?.name : 'No tournament'}
+                              </Badge>
+                            </div>
+                          )}
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
@@ -350,6 +417,12 @@ const MatchHistory = () => {
                           </div>
                         ) : (
                           <div className="p-4 space-y-6">
+                            {match.tournament_id && match.tournaments?.name && (
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm text-muted-foreground">Tournament</div>
+                                <Badge variant="secondary">{match.tournaments.name}</Badge>
+                              </div>
+                            )}
                             {/* Batting Scorecard */}
                             {battingScorecard.length > 0 && (
                               <div>
