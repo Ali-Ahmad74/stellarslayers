@@ -6,10 +6,6 @@ import { useState } from 'react';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
 
 const navItems = [{
-  path: '/',
-  label: 'Rankings',
-  icon: Trophy
-}, {
   path: '/leaderboard',
   label: 'Leaderboard',
   icon: Medal
