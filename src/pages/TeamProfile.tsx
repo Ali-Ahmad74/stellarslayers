@@ -6,12 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Trophy, Target, Calendar, MapPin, Users, Star, Award, TrendingUp } from 'lucide-react';
+import { Loader2, Trophy, Target, Calendar, MapPin, Users, Star, Award, TrendingUp, Share2 } from 'lucide-react';
 import { TeamLogoUpload } from '@/components/TeamLogoUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { SiteFooter } from '@/components/SiteFooter';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
@@ -45,6 +47,10 @@ const TeamProfile = () => {
   const [teamDescriptionDraft, setTeamDescriptionDraft] = useState('');
   const [savingTeam, setSavingTeam] = useState(false);
 
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
+  const [watermarkHandle, setWatermarkHandle] = useState('');
+  const [watermarkPosition, setWatermarkPosition] = useState('bottom-right');
+
   useEffect(() => {
     const fetchData = async () => {
       const [matchesRes] = await Promise.all([
@@ -61,6 +67,9 @@ const TeamProfile = () => {
     if (!teamSettings) return;
     setTeamNameDraft(teamSettings.team_name || '');
     setTeamDescriptionDraft(teamSettings.description || '');
+    setWatermarkEnabled(teamSettings.watermark_enabled);
+    setWatermarkHandle(teamSettings.watermark_handle || '');
+    setWatermarkPosition(teamSettings.watermark_position);
   }, [teamSettings]);
 
   const handleSaveBranding = async () => {
@@ -75,6 +84,9 @@ const TeamProfile = () => {
       await updateTeamSettings({
         team_name: name,
         description: teamDescriptionDraft.trim() || null,
+        watermark_enabled: watermarkEnabled,
+        watermark_handle: watermarkHandle.trim() || null,
+        watermark_position: watermarkPosition,
       });
       toast.success('Team branding updated');
     } catch (e) {
@@ -204,6 +216,55 @@ const TeamProfile = () => {
                       placeholder="A short description shown on the Team page"
                       className="min-h-[100px]"
                     />
+                  </div>
+
+                  <div className="grid gap-4 mt-6 pt-6 border-t border-border">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="watermark-toggle">Watermark on player cards</Label>
+                        <Switch
+                          id="watermark-toggle"
+                          checked={watermarkEnabled}
+                          onCheckedChange={setWatermarkEnabled}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, exported player card PNGs will include your team branding watermark.
+                      </p>
+                    </div>
+
+                    {watermarkEnabled && (
+                      <>
+                        <div className="grid gap-2">
+                          <Label htmlFor="watermark-handle">Social handle</Label>
+                          <Input
+                            id="watermark-handle"
+                            value={watermarkHandle}
+                            onChange={(e) => setWatermarkHandle(e.target.value)}
+                            maxLength={50}
+                            placeholder="@yourteam"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Example: @yourteam or yourteam.com
+                          </p>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="watermark-position">Watermark position</Label>
+                          <Select value={watermarkPosition} onValueChange={setWatermarkPosition}>
+                            <SelectTrigger id="watermark-position">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bottom-left">Bottom left</SelectItem>
+                              <SelectItem value="bottom-right">Bottom right</SelectItem>
+                              <SelectItem value="top-left">Top left</SelectItem>
+                              <SelectItem value="top-right">Top right</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-end gap-2">

@@ -16,6 +16,7 @@ import { ShareablePlayerCard } from "@/components/ShareablePlayerCard";
 import type { PlayerStats } from "@/hooks/usePlayerRankings";
 import type { PlayerRole } from "@/types/cricket";
 import type { ScoringSettings } from "@/hooks/useScoringSettings";
+import type { TeamSettings } from "@/hooks/useTeamSettings";
 
 type CardFormat = "story" | "square" | "wide";
 
@@ -33,6 +34,7 @@ export interface SharePlayerCardDialogProps {
   onOpenChange: (open: boolean) => void;
   teamName?: string;
   scoringSettings?: Partial<ScoringSettings> | null;
+  teamSettings?: Partial<TeamSettings> | null;
   player: {
     id: number;
     name: string;
@@ -48,6 +50,7 @@ export function SharePlayerCardDialog({
   player,
   teamName,
   scoringSettings,
+  teamSettings,
 }: SharePlayerCardDialogProps) {
   const [format, setFormat] = useState<CardFormat>("square");
   const [downloading, setDownloading] = useState(false);
@@ -120,7 +123,11 @@ export function SharePlayerCardDialog({
                 ref={cardRef}
                 player={player}
                 teamName={teamName}
+                teamLogoUrl={teamSettings?.team_logo_url || null}
                 scoringSettings={scoringSettings}
+                watermarkEnabled={teamSettings?.watermark_enabled || false}
+                watermarkHandle={teamSettings?.watermark_handle || null}
+                watermarkPosition={teamSettings?.watermark_position || 'bottom-right'}
                 format={format}
               />
             </div>

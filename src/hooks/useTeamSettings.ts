@@ -5,6 +5,9 @@ export interface TeamSettings {
   team_name: string;
   team_logo_url: string | null;
   description: string | null;
+  watermark_enabled: boolean;
+  watermark_handle: string | null;
+  watermark_position: string;
 }
 
 /**
@@ -23,7 +26,7 @@ export function useTeamSettings() {
 
     const { data, error } = await supabase
       .from("team_settings")
-      .select("team_name, team_logo_url, description")
+      .select("team_name, team_logo_url, description, watermark_enabled, watermark_handle, watermark_position")
       .eq("id", 1)
       .maybeSingle();
 
@@ -65,7 +68,7 @@ export function useTeamSettings() {
       .from("team_settings")
       .update({ ...patch, updated_at: new Date().toISOString() })
       .eq("id", 1)
-      .select("team_name, team_logo_url, description")
+      .select("team_name, team_logo_url, description, watermark_enabled, watermark_handle, watermark_position")
       .maybeSingle();
 
     if (error) throw error;

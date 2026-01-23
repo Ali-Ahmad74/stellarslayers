@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Trophy, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, RefreshCw, Share2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +17,9 @@ import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
 import { useFieldingRankingsBySeason } from '@/hooks/useFieldingRankingsBySeason';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { useScoringSettings } from '@/hooks/useScoringSettings';
+import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SiteFooter } from '@/components/SiteFooter';
 type SortKey = 'totalPoints' | 'battingPoints' | 'bowlingPoints' | 'fieldingPoints' | 'weeklyChange' | 'monthlyChange';
 const Leaderboard = () => {
@@ -33,9 +36,13 @@ const Leaderboard = () => {
   const {
     isAdmin
   } = useAuth();
+  const { teamSettings } = useTeamSettings();
+  const { settings: scoringSettings } = useScoringSettings();
+
   const [sortKey, setSortKey] = useState<SortKey>('totalPoints');
   const [activeTab, setActiveTab] = useState('overall');
   const [isRecording, setIsRecording] = useState(false);
+  const [sharePlayerId, setSharePlayerId] = useState<number | null>(null);
 
   // Season filter states for each category
   const [battingSeasonId, setBattingSeasonId] = useState<string>('all');
@@ -62,6 +69,8 @@ const Leaderboard = () => {
     await recordCurrentPoints();
     setIsRecording(false);
   };
+
+  const sharePlayer = players.find(p => p.id === sharePlayerId);
 
   // Filter and sort players based on active tab (excludes batting/bowling/fielding which use season filters)
   const getLeaderboardData = () => {
@@ -426,6 +435,7 @@ const Leaderboard = () => {
                                 Month
                               </div>
                             </TableHead>
+                            <TableHead className="text-center font-semibold w-16">Share</TableHead>
                           </> : activeTab === 'batting' ? <>
                             <TableHead className="text-center font-semibold">Runs</TableHead>
                             <TableHead className="text-center font-semibold">SR</TableHead>
@@ -559,14 +569,14 @@ const Leaderboard = () => {
                     }} transition={{
                       duration: 0.3,
                       delay: index * 0.03
-                    }} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => window.location.href = `/player/${player.id}`}>
+                    }} className="border-b border-border hover:bg-muted/30 transition-colors">
                             <TableCell className="text-center">
                               <div className="flex justify-center">
                                 <RankBadge rank={player.rank} />
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
+                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -593,6 +603,19 @@ const Leaderboard = () => {
                                   {player.monthlyChange > 0 ? '+' : ''}{player.monthlyChange}
                                 </span>
                               </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSharePlayerId(player.id);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </Button>
                             </TableCell>
                           </motion.tr>)}
                     </TableBody>
@@ -649,6 +672,23 @@ const Leaderboard = () => {
       </main>
 
       <SiteFooter />
+
+      {sharePlayer && (
+        <SharePlayerCardDialog
+          open={!!sharePlayerId}
+          onOpenChange={(open) => !open && setSharePlayerId(null)}
+          player={{
+            id: sharePlayer.id,
+            name: sharePlayer.name,
+            role: sharePlayer.role,
+            photo_url: sharePlayer.photo_url,
+            stats: sharePlayer.stats,
+          }}
+          teamName={teamSettings?.team_name}
+          teamSettings={teamSettings}
+          scoringSettings={scoringSettings}
+        />
+      )}
     </div>;
 };
 export default Leaderboard;
