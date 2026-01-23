@@ -495,6 +495,7 @@ export type Database = {
       }
       team_settings: {
         Row: {
+          admin_owner_user_id: string | null
           created_at: string
           description: string | null
           id: number
@@ -506,6 +507,7 @@ export type Database = {
           watermark_position: string
         }
         Insert: {
+          admin_owner_user_id?: string | null
           created_at?: string
           description?: string | null
           id?: number
@@ -517,6 +519,7 @@ export type Database = {
           watermark_position?: string
         }
         Update: {
+          admin_owner_user_id?: string | null
           created_at?: string
           description?: string | null
           id?: number
