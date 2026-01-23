@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RankingPlayer, PlayerRole } from '@/types/cricket';
+import { useScoringSettings } from '@/hooks/useScoringSettings';
 
 interface BowlingStats {
   player_id: number;
@@ -22,25 +23,29 @@ interface Player {
 }
 
 // Calculate bowling points for a player's stats
-function calculateBowlingPoints(stats: BowlingStats): number {
+function calculateBowlingPoints(stats: BowlingStats, scoring?: ReturnType<typeof useScoringSettings>["settings"] | null): number {
   let points = 0;
+  const s = scoring ?? ({} as any);
   
-  points += stats.wickets * 10; // +10 per wicket
-  points += stats.maidens * 5; // +5 per maiden
+  points += stats.wickets * Number(s.bowling_wicket_points ?? 10);
+  points += stats.maidens * Number(s.bowling_maiden_points ?? 5);
   
   // Milestone bonuses
-  points += stats.three_fers * 5; // +5 per 3fer
-  points += stats.five_fers * 10; // +10 per 5fer
+  points += stats.three_fers * Number(s.bowling_threefer_bonus ?? 5);
+  points += stats.five_fers * Number(s.bowling_fivefer_bonus ?? 10);
   
   // Penalties
-  points -= stats.no_balls * 1; // -1 per no-ball
-  points -= stats.wides * 1; // -1 per wide
+  points -= stats.no_balls * Number(s.bowling_noball_penalty ?? 1);
+  points -= stats.wides * Number(s.bowling_wide_penalty ?? 1);
   
-  // Economy bonus: (8 - economy) * 3, capped at 25
+  // Economy bonus: (target - economy) * multiplier, capped
   if (stats.bowling_balls > 0) {
     const overs = stats.bowling_balls / 6;
     const economy = stats.runs_conceded / overs;
-    const ecoBonus = Math.max(0, Math.min(25, (8 - economy) * 3));
+    const target = Number(s.bowling_eco_target ?? 8);
+    const mult = Number(s.bowling_eco_bonus_multiplier ?? 3);
+    const cap = Number(s.bowling_eco_bonus_cap ?? 25);
+    const ecoBonus = Math.max(0, Math.min(cap, (target - economy) * mult));
     points += ecoBonus;
   }
   
@@ -51,6 +56,7 @@ export function useBowlingRankingsBySeason(seasonId: string | null) {
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { settings: scoringSettings } = useScoringSettings();
 
   const fetchRankings = useCallback(async () => {
     setLoading(true);
@@ -152,7 +158,7 @@ export function useBowlingRankingsBySeason(seasonId: string | null) {
           id: player.id,
           name: player.name,
           role: player.role,
-          rating: calculateBowlingPoints(stats),
+          rating: calculateBowlingPoints(stats, scoringSettings),
           matches: stats.matches,
           wickets: stats.wickets,
           economy: Math.round(economy * 100) / 100,
@@ -190,6 +196,9 @@ export function useBowlingRankingsBySeason(seasonId: string | null) {
         fetchRankings();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        fetchRankings();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scoring_settings' }, () => {
         fetchRankings();
       })
       .subscribe();

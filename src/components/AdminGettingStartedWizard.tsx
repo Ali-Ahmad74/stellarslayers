@@ -32,30 +32,35 @@ export function AdminGettingStartedWizard({
         title: "Create Season",
         done: seasonsCount > 0,
         cta: "Add season",
+        countLabel: `${seasonsCount} season${seasonsCount === 1 ? "" : "s"}`,
       },
       {
         key: "players" as const,
         title: "Add Players",
         done: playersCount > 0,
         cta: "Add player",
+        countLabel: `${playersCount} player${playersCount === 1 ? "" : "s"}`,
       },
       {
         key: "tournament" as const,
         title: "Create Tournament",
         done: tournamentsCount > 0,
         cta: "Add tournament",
+        countLabel: `${tournamentsCount} tournament${tournamentsCount === 1 ? "" : "s"}`,
       },
       {
         key: "match" as const,
         title: "Add Match",
         done: matchesCount > 0,
         cta: "Add match",
+        countLabel: `${matchesCount} match${matchesCount === 1 ? "" : "s"}`,
       },
       {
         key: "performance" as const,
         title: "Enter Performances",
         done: hasAnyPerformance,
         cta: "Add performance",
+        countLabel: hasAnyPerformance ? "1+ entries" : "0 entries",
       },
     ],
     [seasonsCount, playersCount, tournamentsCount, matchesCount, hasAnyPerformance]
@@ -63,6 +68,7 @@ export function AdminGettingStartedWizard({
 
   const completed = steps.filter((s) => s.done).length;
   const percent = Math.round((completed / steps.length) * 100);
+  const nextStepKey = steps.find((s) => !s.done)?.key;
 
   if (!isAdmin) return null;
 
@@ -84,10 +90,18 @@ export function AdminGettingStartedWizard({
         </div>
 
         <div className="grid gap-2">
-          {steps.map((step) => (
+          {steps.map((step, index) => {
+            const prevDone = index === 0 ? true : steps[index - 1].done;
+            const blocked = !step.done && !prevDone;
+            const isNext = nextStepKey === step.key;
+
+            return (
             <div
               key={step.key}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+              className={
+                "flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 " +
+                (isNext ? "ring-1 ring-primary/40" : "")
+              }
             >
               <div className="flex items-center gap-3">
                 {step.done ? (
@@ -98,7 +112,7 @@ export function AdminGettingStartedWizard({
                 <div>
                   <div className="text-sm font-medium">{step.title}</div>
                   <div className="text-xs text-muted-foreground">
-                    {step.done ? "Done" : "Not started"}
+                    {step.done ? `Done • ${step.countLabel}` : blocked ? `Locked • ${step.countLabel}` : `Not started • ${step.countLabel}`}
                   </div>
                 </div>
               </div>
@@ -106,11 +120,13 @@ export function AdminGettingStartedWizard({
                 variant={step.done ? "outline" : "default"}
                 size="sm"
                 onClick={() => onGoToStep(step.key)}
+                disabled={blocked}
               >
                 {step.cta}
               </Button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RankingPlayer, PlayerRole } from '@/types/cricket';
+import { useScoringSettings } from '@/hooks/useScoringSettings';
 
 interface BattingStats {
   player_id: number;
@@ -22,22 +23,25 @@ interface Player {
 }
 
 // Calculate batting points for a player's stats
-function calculateBattingPoints(stats: BattingStats): number {
+function calculateBattingPoints(stats: BattingStats, scoring?: ReturnType<typeof useScoringSettings>["settings"] | null): number {
   let points = 0;
+  const s = scoring ?? ({} as any);
   
-  points += stats.total_runs; // 1 point per run
-  points += stats.fours * 2; // +2 per four
-  points += stats.sixes * 3; // +3 per six
+  points += stats.total_runs * Number(s.batting_run_points ?? 1);
+  points += stats.fours * Number(s.batting_four_points ?? 2);
+  points += stats.sixes * Number(s.batting_six_points ?? 3);
   
   // Milestone bonuses
-  points += stats.thirties * 5; // +5 per 30+ innings
-  points += stats.fifties * 10; // +10 per 50+ innings
-  points += stats.hundreds * 20; // +20 per 100+ innings
+  points += stats.thirties * Number(s.batting_thirty_bonus ?? 5);
+  points += stats.fifties * Number(s.batting_fifty_bonus ?? 10);
+  points += stats.hundreds * Number(s.batting_hundred_bonus ?? 20);
   
-  // Strike rate bonus: (SR - 100) / 5, capped at 30
+  // Strike rate bonus: (SR - 100) / divisor, capped at cap
   if (stats.total_balls > 0) {
     const strikeRate = (stats.total_runs / stats.total_balls) * 100;
-    const srBonus = Math.max(0, Math.min(30, (strikeRate - 100) / 5));
+    const srCap = Number(s.batting_sr_bonus_cap ?? 30);
+    const srDiv = Number(s.batting_sr_bonus_divisor ?? 5);
+    const srBonus = Math.max(0, Math.min(srCap, (strikeRate - 100) / srDiv));
     points += srBonus;
   }
   
@@ -48,6 +52,7 @@ export function useBattingRankingsBySeason(seasonId: string | null) {
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { settings: scoringSettings } = useScoringSettings();
 
   const fetchRankings = useCallback(async () => {
     setLoading(true);
@@ -150,7 +155,7 @@ export function useBattingRankingsBySeason(seasonId: string | null) {
           id: player.id,
           name: player.name,
           role: player.role,
-          rating: calculateBattingPoints(stats),
+          rating: calculateBattingPoints(stats, scoringSettings),
           matches: stats.matches,
           runs: stats.total_runs,
           strikeRate: Math.round(strikeRate * 100) / 100,
@@ -188,6 +193,9 @@ export function useBattingRankingsBySeason(seasonId: string | null) {
         fetchRankings();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        fetchRankings();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scoring_settings' }, () => {
         fetchRankings();
       })
       .subscribe();

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Target, Shield } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { calculateICCPoints, PlayerStats } from '@/hooks/usePlayerRankings';
+import type { ScoringSettings } from '@/hooks/useScoringSettings';
 import type { PlayerRole } from '@/types/cricket';
 
 interface ShareablePlayerCardProps {
@@ -15,12 +16,13 @@ interface ShareablePlayerCardProps {
   };
   format?: 'story' | 'square' | 'wide';
   teamName?: string;
+  scoringSettings?: Partial<ScoringSettings> | null;
 }
 
 export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareablePlayerCardProps>(
-  ({ player, format = 'story', teamName = 'Cricket Club' }, ref) => {
+  ({ player, format = 'story', teamName = 'Cricket Club', scoringSettings }, ref) => {
     const { stats } = player;
-    const iccPoints = calculateICCPoints(stats);
+    const iccPoints = calculateICCPoints(stats, scoringSettings);
 
     const strikeRate = stats && stats.total_balls > 0 
       ? ((stats.total_runs / stats.total_balls) * 100).toFixed(1) 

@@ -1,0 +1,132 @@
+import { useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+
+import { ShareablePlayerCard } from "@/components/ShareablePlayerCard";
+import type { PlayerStats } from "@/hooks/usePlayerRankings";
+import type { PlayerRole } from "@/types/cricket";
+import type { ScoringSettings } from "@/hooks/useScoringSettings";
+
+type CardFormat = "story" | "square" | "wide";
+
+function downloadDataUrl(filename: string, dataUrl: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+export interface SharePlayerCardDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  teamName?: string;
+  scoringSettings?: Partial<ScoringSettings> | null;
+  player: {
+    id: number;
+    name: string;
+    role: PlayerRole;
+    photo_url: string | null;
+    stats: PlayerStats | null;
+  };
+}
+
+export function SharePlayerCardDialog({
+  open,
+  onOpenChange,
+  player,
+  teamName,
+  scoringSettings,
+}: SharePlayerCardDialogProps) {
+  const [format, setFormat] = useState<CardFormat>("story");
+  const [downloading, setDownloading] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const filename = useMemo(() => {
+    const safe = player.name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-_]/g, "");
+    return `${safe || "player"}-card-${format}.png`;
+  }, [player.name, format]);
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return;
+    setDownloading(true);
+    try {
+      // Use a solid background so transparent PNGs don't look odd in galleries.
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "hsl(222 47% 8%)",
+      });
+      downloadDataUrl(filename, dataUrl);
+      toast.success("Player card downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to export card");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="font-display">Share Player Card</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Format</span>
+              <Select value={format} onValueChange={(v) => setFormat(v as CardFormat)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Choose format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="story">Story (9:16)</SelectItem>
+                  <SelectItem value="square">Square (1:1)</SelectItem>
+                  <SelectItem value="wide">Wide (16:9)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={downloading}>
+                Close
+              </Button>
+              <Button onClick={handleDownload} disabled={downloading}>
+                {downloading ? "Preparing…" : "Download PNG"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-auto">
+            <div className="mx-auto w-fit">
+              <ShareablePlayerCard
+                ref={cardRef}
+                player={player}
+                teamName={teamName}
+                scoringSettings={scoringSettings}
+                format={format}
+              />
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

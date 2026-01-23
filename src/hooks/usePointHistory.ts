@@ -83,6 +83,14 @@ export function usePointHistory() {
 
   const recordCurrentPoints = async () => {
     try {
+      const { data: scoringData, error: scoringError } = await supabase
+        .from('scoring_settings')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (scoringError) throw scoringError;
+
       // Fetch current player stats
       const { data: playersData, error: playersError } = await supabase
         .from('players')
@@ -129,7 +137,7 @@ export function usePointHistory() {
             dropped_catches: Number((playerStats as any).dropped_catches) || 0,
           };
 
-          const points = calculateICCPoints(stats);
+          const points = calculateICCPoints(stats, scoringData as any);
 
           await supabase
             .from('point_history')
