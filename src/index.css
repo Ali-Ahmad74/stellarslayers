@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core Sports Theme - Blue/Cyan */
+    --background: 220 20% 97%;
+    --foreground: 210 50% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 50% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 50% 15%;
+
+    /* Primary Blue */
+    --primary: 214 100% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary Cyan */
+    --secondary: 195 100% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 15% 92%;
+    --muted-foreground: 215 15% 45%;
+
+    /* Accent - Gold */
+    --accent: 45 100% 50%;
+    --accent-foreground: 210 50% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 214 100% 40%;
+
+    --radius: 0.75rem;
+
+    /* Custom Colors */
+    --gold: 45 100% 50%;
+    --silver: 0 0% 75%;
+    --bronze: 30 60% 50%;
+    --success: 160 84% 39%;
+    --cricket-green: 142 76% 36%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 100% 40%) 0%, hsl(195 100% 45%) 100%);
+    --gradient-header: linear-gradient(135deg, hsl(214 100% 40%) 0%, hsl(195 100% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(286 72% 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45 100% 50%) 0%, hsl(35 100% 55%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px -2px hsl(214 100% 40% / 0.1);
+    --shadow-md: 0 8px 24px -4px hsl(214 100% 40% / 0.15);
+    --shadow-lg: 0 16px 48px -8px hsl(214 100% 40% / 0.2);
+    --shadow-glow: 0 0 40px hsl(195 100% 45% / 0.3);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 215 35% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 35% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 35% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 200 100% 55%;
+    --primary-foreground: 215 35% 8%;
+
+    --secondary: 215 35% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 35% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 45 100% 50%;
+    --accent-foreground: 215 35% 8%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 215 35% 20%;
+    --input: 215 35% 20%;
+    --ring: 200 100% 55%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(215 35% 20%) 0%, hsl(220 40% 25%) 100%);
+    --gradient-header: linear-gradient(135deg, hsl(215 35% 15%) 0%, hsl(220 40% 20%) 100%);
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Rajdhani', sans-serif;
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-header {
+    background: var(--gradient-header);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-gold {
+    background: var(--gradient-gold);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background: var(--gradient-primary);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl;
+  }
+
+  .glass-dark {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(var(--accent) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(var(--accent) / 0.5);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--accent) / 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+}

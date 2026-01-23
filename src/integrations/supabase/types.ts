@@ -1,0 +1,654 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      batting_inputs: {
+        Row: {
+          balls: number
+          created_at: string
+          fours: number
+          id: number
+          match_id: number
+          out: boolean
+          player_id: number
+          runs: number
+          season_id: number | null
+          sixes: number
+        }
+        Insert: {
+          balls?: number
+          created_at?: string
+          fours?: number
+          id?: number
+          match_id: number
+          out?: boolean
+          player_id: number
+          runs?: number
+          season_id?: number | null
+          sixes?: number
+        }
+        Update: {
+          balls?: number
+          created_at?: string
+          fours?: number
+          id?: number
+          match_id?: number
+          out?: boolean
+          player_id?: number
+          runs?: number
+          season_id?: number | null
+          sixes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batting_inputs_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batting_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "batting_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batting_inputs_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bowling_inputs: {
+        Row: {
+          balls: number
+          created_at: string
+          fours_conceded: number
+          id: number
+          maidens: number
+          match_id: number
+          no_balls: number
+          player_id: number
+          runs_conceded: number
+          season_id: number | null
+          sixes_conceded: number
+          wickets: number
+          wides: number
+        }
+        Insert: {
+          balls?: number
+          created_at?: string
+          fours_conceded?: number
+          id?: number
+          maidens?: number
+          match_id: number
+          no_balls?: number
+          player_id: number
+          runs_conceded?: number
+          season_id?: number | null
+          sixes_conceded?: number
+          wickets?: number
+          wides?: number
+        }
+        Update: {
+          balls?: number
+          created_at?: string
+          fours_conceded?: number
+          id?: number
+          maidens?: number
+          match_id?: number
+          no_balls?: number
+          player_id?: number
+          runs_conceded?: number
+          season_id?: number | null
+          sixes_conceded?: number
+          wickets?: number
+          wides?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bowling_inputs_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bowling_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "bowling_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bowling_inputs_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fielding_inputs: {
+        Row: {
+          catches: number
+          created_at: string
+          dropped_catches: number
+          id: number
+          match_id: number
+          player_id: number
+          runouts: number
+          season_id: number | null
+          stumpings: number
+        }
+        Insert: {
+          catches?: number
+          created_at?: string
+          dropped_catches?: number
+          id?: number
+          match_id: number
+          player_id: number
+          runouts?: number
+          season_id?: number | null
+          stumpings?: number
+        }
+        Update: {
+          catches?: number
+          created_at?: string
+          dropped_catches?: number
+          id?: number
+          match_id?: number
+          player_id?: number
+          runouts?: number
+          season_id?: number | null
+          stumpings?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fielding_inputs_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fielding_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "fielding_inputs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fielding_inputs_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          created_at: string
+          id: number
+          match_date: string
+          opponent_name: string | null
+          opponent_score: number | null
+          our_score: number | null
+          overs: number
+          result: string | null
+          venue: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          match_date: string
+          opponent_name?: string | null
+          opponent_score?: number | null
+          our_score?: number | null
+          overs?: number
+          result?: string | null
+          venue?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          match_date?: string
+          opponent_name?: string | null
+          opponent_score?: number | null
+          our_score?: number | null
+          overs?: number
+          result?: string | null
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          batting_style: string | null
+          bowling_style: string | null
+          created_at: string
+          id: number
+          name: string
+          photo_url: string | null
+          role: string
+        }
+        Insert: {
+          batting_style?: string | null
+          bowling_style?: string | null
+          created_at?: string
+          id?: number
+          name: string
+          photo_url?: string | null
+          role: string
+        }
+        Update: {
+          batting_style?: string | null
+          bowling_style?: string | null
+          created_at?: string
+          id?: number
+          name?: string
+          photo_url?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
+      point_history: {
+        Row: {
+          batting_points: number
+          bowling_points: number
+          created_at: string
+          fielding_points: number
+          id: number
+          player_id: number
+          record_date: string
+          total_points: number
+        }
+        Insert: {
+          batting_points?: number
+          bowling_points?: number
+          created_at?: string
+          fielding_points?: number
+          id?: number
+          player_id: number
+          record_date?: string
+          total_points?: number
+        }
+        Update: {
+          batting_points?: number
+          bowling_points?: number
+          created_at?: string
+          fielding_points?: number
+          id?: number
+          player_id?: number
+          record_date?: string
+          total_points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_history_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "point_history_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasons: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: number
+          is_active: boolean
+          name: string
+          start_date: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: number
+          is_active?: boolean
+          name: string
+          start_date?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: number
+          is_active?: boolean
+          name?: string
+          start_date?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      team_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          team_logo_url: string | null
+          team_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          team_logo_url?: string | null
+          team_name?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          team_logo_url?: string | null
+          team_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      player_stats: {
+        Row: {
+          bowling_balls: number | null
+          catches: number | null
+          dropped_catches: number | null
+          fifties: number | null
+          five_fers: number | null
+          fours: number | null
+          fours_conceded: number | null
+          hundreds: number | null
+          maidens: number | null
+          matches: number | null
+          no_balls: number | null
+          player_id: number | null
+          runouts: number | null
+          runs_conceded: number | null
+          sixes: number | null
+          sixes_conceded: number | null
+          stumpings: number | null
+          thirties: number | null
+          three_fers: number | null
+          times_out: number | null
+          total_balls: number | null
+          total_runs: number | null
+          wickets: number | null
+          wides: number | null
+        }
+        Insert: {
+          bowling_balls?: never
+          catches?: never
+          dropped_catches?: never
+          fifties?: never
+          five_fers?: never
+          fours?: never
+          fours_conceded?: never
+          hundreds?: never
+          maidens?: never
+          matches?: never
+          no_balls?: never
+          player_id?: number | null
+          runouts?: never
+          runs_conceded?: never
+          sixes?: never
+          sixes_conceded?: never
+          stumpings?: never
+          thirties?: never
+          three_fers?: never
+          times_out?: never
+          total_balls?: never
+          total_runs?: never
+          wickets?: never
+          wides?: never
+        }
+        Update: {
+          bowling_balls?: never
+          catches?: never
+          dropped_catches?: never
+          fifties?: never
+          five_fers?: never
+          fours?: never
+          fours_conceded?: never
+          hundreds?: never
+          maidens?: never
+          matches?: never
+          no_balls?: never
+          player_id?: number | null
+          runouts?: never
+          runs_conceded?: never
+          sixes?: never
+          sixes_conceded?: never
+          stumpings?: never
+          thirties?: never
+          three_fers?: never
+          times_out?: never
+          total_balls?: never
+          total_runs?: never
+          wickets?: never
+          wides?: never
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      calculate_player_ratings: {
+        Args: { p_player_id: number }
+        Returns: {
+          allrounder_rating: number
+          batting_rating: number
+          bowling_rating: number
+          fielding_rating: number
+          overall_rating: number
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      app_role: "admin" | "user"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["admin", "user"],
+    },
+  },
+} as const
