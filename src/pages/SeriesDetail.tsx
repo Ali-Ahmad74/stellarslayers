@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, ChevronLeft, Loader2, MapPin, Trophy, Users } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, ChevronUp, Loader2, MapPin, Share2, Trophy, Users } from "lucide-react";
+import { MatchScorecard } from "@/components/MatchScorecard";
+import { ShareSeriesHighlightsDialog } from "@/components/ShareSeriesHighlightsDialog";
+import { useTeamSettings } from "@/hooks/useTeamSettings";
+import { SeriesFormStrip } from "@/components/series/SeriesFormStrip";
+import { SeriesOpponentBreakdown, type OpponentStandingRow } from "@/components/series/SeriesOpponentBreakdown";
 
 interface Series {
   id: number;
@@ -140,6 +145,8 @@ export default function SeriesDetail() {
   const { id } = useParams();
   const seriesId = Number(id);
 
+  const { teamSettings } = useTeamSettings();
+
   const [series, setSeries] = useState<Series | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playersById, setPlayersById] = useState<Map<number, PlayerLite>>(new Map());
@@ -147,10 +154,61 @@ export default function SeriesDetail() {
   const [topWickets, setTopWickets] = useState<PerformerRow[]>([]);
   const [topFielding, setTopFielding] = useState<PerformerRow[]>([]);
 
+  const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const standing = useMemo(() => computeStanding(matches), [matches]);
+
+  const opponentBreakdown = useMemo<OpponentStandingRow[]>(() => {
+    const byOpponent = new Map<string, Match[]>();
+    for (const m of matches) {
+      const key = (m.opponent_name || "Unknown opponent").trim() || "Unknown opponent";
+      byOpponent.set(key, [...(byOpponent.get(key) ?? []), m]);
+    }
+
+    return [...byOpponent.entries()]
+      .map(([opponent, list]) => ({ opponent, ...computeStanding(list) }))
+      .sort((a, b) => b.played - a.played);
+  }, [matches]);
+
+  const highlightRuns = useMemo(() => {
+    return topRuns.slice(0, 3).map((r) => {
+      const p = playersById.get(r.player_id);
+      return {
+        player_id: r.player_id,
+        player_name: p?.name ?? "Unknown",
+        photo_url: p?.photo_url ?? null,
+        value: r.value,
+      };
+    });
+  }, [topRuns, playersById]);
+
+  const highlightWickets = useMemo(() => {
+    return topWickets.slice(0, 3).map((r) => {
+      const p = playersById.get(r.player_id);
+      return {
+        player_id: r.player_id,
+        player_name: p?.name ?? "Unknown",
+        photo_url: p?.photo_url ?? null,
+        value: r.value,
+      };
+    });
+  }, [topWickets, playersById]);
+
+  const highlightFielding = useMemo(() => {
+    return topFielding.slice(0, 3).map((r) => {
+      const p = playersById.get(r.player_id);
+      return {
+        player_id: r.player_id,
+        player_name: p?.name ?? "Unknown",
+        photo_url: p?.photo_url ?? null,
+        value: r.value,
+      };
+    });
+  }, [topFielding, playersById]);
 
   useEffect(() => {
     if (!Number.isFinite(seriesId)) {
@@ -311,6 +369,10 @@ export default function SeriesDetail() {
 
   const dateRange = formatDateRange(series.start_date, series.end_date);
 
+  const toggleExpand = (matchId: number) => {
+    setExpandedMatchId((prev) => (prev === matchId ? null : matchId));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -323,7 +385,13 @@ export default function SeriesDetail() {
               Back
             </Button>
           </Link>
-          {series.is_active && <Badge>Active</Badge>}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShareOpen(true)}>
+              <Share2 className="w-4 h-4" />
+              Share highlights
+            </Button>
+            {series.is_active && <Badge>Active</Badge>}
+          </div>
         </div>
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
@@ -384,6 +452,11 @@ export default function SeriesDetail() {
           </Card>
         </section>
 
+        <section className="space-y-4">
+          <SeriesFormStrip matches={matches} length={5} />
+          <SeriesOpponentBreakdown rows={opponentBreakdown} />
+        </section>
+
         {/* Top Performers */}
         <section className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -431,8 +504,16 @@ export default function SeriesDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.03 }}
                 >
-                  <Card variant="elevated">
-                    <CardContent className="p-4">
+                  <Card variant="elevated" className="overflow-hidden">
+                    <div
+                      className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => toggleExpand(m.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") toggleExpand(m.id);
+                      }}
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="font-semibold truncate">
@@ -462,20 +543,60 @@ export default function SeriesDetail() {
                         <div className="flex flex-col items-end gap-2 shrink-0">
                           {m.our_score !== null && m.opponent_score !== null && (
                             <div className="text-right">
-                              <div className="font-bold text-lg tabular-nums">{m.our_score} - {m.opponent_score}</div>
+                              <div className="font-bold text-lg tabular-nums">
+                                {m.our_score} - {m.opponent_score}
+                              </div>
                               <div className="text-xs text-muted-foreground">{m.overs} overs</div>
                             </div>
                           )}
-                          {m.result && <Badge variant={resultBadgeVariant(m.result)}>{m.result}</Badge>}
+                          <div className="flex items-center gap-2">
+                            {m.result && <Badge variant={resultBadgeVariant(m.result)}>{m.result}</Badge>}
+                            {expandedMatchId === m.id ? (
+                              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </CardContent>
+                    </div>
+
+                    <AnimatePresence>
+                      {expandedMatchId === m.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="border-t"
+                        >
+                          <MatchScorecard matchId={m.id} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </Card>
                 </motion.div>
               ))}
             </div>
           )}
         </section>
+
+        <ShareSeriesHighlightsDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          teamName={teamSettings?.team_name}
+          teamSettings={teamSettings}
+          series={{
+            name: series.name,
+            venue: series.venue,
+            start_date: series.start_date,
+            end_date: series.end_date,
+          }}
+          standing={standing}
+          topRuns={highlightRuns}
+          topWickets={highlightWickets}
+          topFielding={highlightFielding}
+        />
       </main>
 
       <SiteFooter />

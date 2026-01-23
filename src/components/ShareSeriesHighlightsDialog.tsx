@@ -69,10 +69,12 @@ export function ShareSeriesHighlightsDialog({
     if (!cardRef.current) return;
     setDownloading(true);
     try {
+      const bgVar = getComputedStyle(document.documentElement).getPropertyValue("--background").trim();
+      const backgroundColor = bgVar ? `hsl(${bgVar})` : undefined;
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "hsl(222 47% 8%)",
+        backgroundColor,
       });
       downloadDataUrl(filename, dataUrl);
       toast.success("Series highlights downloaded");
