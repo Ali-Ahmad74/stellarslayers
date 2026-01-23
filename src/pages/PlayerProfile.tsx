@@ -10,6 +10,7 @@ import { RoleBadge } from '@/components/RoleBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateICCPoints, PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
 import type { PlayerRole } from '@/types/cricket';
+import { useScoringSettings } from '@/hooks/useScoringSettings';
 
 interface Player {
   id: number;
@@ -25,6 +26,7 @@ const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
+  const { settings: scoringSettings } = useScoringSettings();
 
   useEffect(() => {
     const fetchPlayer = async () => {
@@ -35,7 +37,7 @@ const PlayerProfile = () => {
         .from('players')
         .select('*')
         .eq('id', Number(id))
-        .single();
+        .maybeSingle();
 
       if (!playerData) {
         setLoading(false);
@@ -47,7 +49,7 @@ const PlayerProfile = () => {
         .from('player_stats')
         .select('*')
         .eq('player_id', Number(id))
-        .single();
+        .maybeSingle();
 
       const stats: PlayerStatsType | null = statsData ? {
         matches: Number(statsData.matches) || 0,
@@ -112,7 +114,7 @@ const PlayerProfile = () => {
   }
 
   const { stats } = player;
-  const iccPoints = calculateICCPoints(stats);
+  const iccPoints = calculateICCPoints(stats, scoringSettings);
 
   // Calculate derived stats
   const strikeRate = stats && stats.total_balls > 0 
