@@ -193,6 +193,7 @@ const Admin = () => {
           match_date: data.match_date,
           overs: data.overs,
           venue: data.venue,
+          tournament_id: data.tournament_id,
           opponent_name: data.opponent_name,
           our_score: data.our_score,
           opponent_score: data.opponent_score,
@@ -214,6 +215,7 @@ const Admin = () => {
           match_date: data.match_date,
           overs: data.overs,
           venue: data.venue,
+          tournament_id: data.tournament_id,
           opponent_name: data.opponent_name,
           our_score: data.our_score,
           opponent_score: data.opponent_score,
@@ -1084,6 +1086,7 @@ const Admin = () => {
         onOpenChange={(open) => { setMatchDialogOpen(open); if (!open) setEditingMatch(undefined); }}
         onSave={handleSaveMatch}
         match={editingMatch}
+        tournaments={tournaments.map(t => ({ id: t.id, name: t.name }))}
         isLoading={saving}
       />
 

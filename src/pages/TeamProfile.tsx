@@ -8,6 +8,13 @@ import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Trophy, Target, Calendar, MapPin, Users, Star, Award, TrendingUp } from 'lucide-react';
 import { TeamLogoUpload } from '@/components/TeamLogoUpload';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { SiteFooter } from '@/components/SiteFooter';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
 
 interface Match {
   id: number;
@@ -28,32 +35,55 @@ interface SeasonStats {
   totalWickets: number;
 }
 
-interface TeamSettings {
-  team_name: string;
-  team_logo_url: string | null;
-  description: string | null;
-}
-
 const TeamProfile = () => {
   const { players, loading: playersLoading } = usePlayerRankings();
   const { isAdmin } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
+  const { teamSettings, updateTeamSettings } = useTeamSettings();
+  const [teamNameDraft, setTeamNameDraft] = useState('');
+  const [teamDescriptionDraft, setTeamDescriptionDraft] = useState('');
+  const [savingTeam, setSavingTeam] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [matchesRes, settingsRes] = await Promise.all([
+      const [matchesRes] = await Promise.all([
         supabase.from('matches').select('*').order('match_date', { ascending: false }),
-        supabase.from('team_settings').select('*').eq('id', 1).single()
       ]);
       
       setMatches(matchesRes.data || []);
-      setTeamSettings(settingsRes.data);
       setLoading(false);
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!teamSettings) return;
+    setTeamNameDraft(teamSettings.team_name || '');
+    setTeamDescriptionDraft(teamSettings.description || '');
+  }, [teamSettings]);
+
+  const handleSaveBranding = async () => {
+    if (!isAdmin) return;
+    const name = teamNameDraft.trim();
+    if (!name) {
+      toast.error('Team name is required');
+      return;
+    }
+    setSavingTeam(true);
+    try {
+      await updateTeamSettings({
+        team_name: name,
+        description: teamDescriptionDraft.trim() || null,
+      });
+      toast.success('Team branding updated');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to update team branding';
+      toast.error(msg);
+    } finally {
+      setSavingTeam(false);
+    }
+  };
 
   const isLoading = loading || playersLoading;
 
@@ -128,7 +158,10 @@ const TeamProfile = () => {
             >
               <TeamLogoUpload 
                 currentLogoUrl={teamSettings?.team_logo_url || null}
-                onLogoChange={(url) => setTeamSettings(prev => prev ? { ...prev, team_logo_url: url } : null)}
+                onLogoChange={() => {
+                  // TeamLogoUpload already updates backend; this forces the header/footer to refresh on next navigation.
+                  // Team page itself will still show the new logo immediately.
+                }}
                 isAdmin={isAdmin}
               />
             </motion.div>
@@ -140,6 +173,58 @@ const TeamProfile = () => {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             {teamSettings?.description || 'A passionate cricket team dedicated to excellence, sportsmanship, and the love of the game. Founded with a vision to nurture talent and compete at the highest levels.'}
           </p>
+
+          {isAdmin && (
+            <div className="mt-8 mx-auto max-w-2xl text-left">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="font-display text-lg font-semibold">Team branding</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Update your team name and description (logo upload is above).
+                </p>
+
+                <div className="mt-4 grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="team-name">Team name</Label>
+                    <Input
+                      id="team-name"
+                      value={teamNameDraft}
+                      onChange={(e) => setTeamNameDraft(e.target.value)}
+                      maxLength={80}
+                      placeholder="e.g., City Strikers"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="team-desc">Description</Label>
+                    <Textarea
+                      id="team-desc"
+                      value={teamDescriptionDraft}
+                      onChange={(e) => setTeamDescriptionDraft(e.target.value)}
+                      maxLength={300}
+                      placeholder="A short description shown on the Team page"
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTeamNameDraft(teamSettings?.team_name || '');
+                        setTeamDescriptionDraft(teamSettings?.description || '');
+                      }}
+                      disabled={savingTeam}
+                    >
+                      Reset
+                    </Button>
+                    <Button onClick={handleSaveBranding} disabled={savingTeam}>
+                      {savingTeam ? 'Saving…' : 'Save branding'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Quick Stats */}
@@ -326,13 +411,7 @@ const TeamProfile = () => {
         </motion.div>
       </main>
 
-      <footer className="border-t bg-card py-6 mt-12">
-        <div className="container text-center">
-          <p className="text-muted-foreground">
-            © 2025 Stellar Slayers Cricket Club. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

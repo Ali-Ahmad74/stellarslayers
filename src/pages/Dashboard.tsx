@@ -10,6 +10,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
 import { SeasonFilter } from '@/components/SeasonFilter';
+import { SiteFooter } from '@/components/SiteFooter';
 
 interface Match {
   id: number;
@@ -377,13 +378,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      <footer className="border-t bg-card py-6 mt-12">
-        <div className="container text-center">
-          <p className="text-muted-foreground">
-            © 2025 Stellar Slayers Cricket Club. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SeasonFilter } from '@/components/SeasonFilter';
 import { HeadToHead } from '@/components/HeadToHead';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SiteFooter } from '@/components/SiteFooter';
 
 interface Match {
   id: number;
@@ -475,13 +476,7 @@ const MatchHistory = () => {
         </Tabs>
       </main>
 
-      <footer className="border-t bg-card py-6 mt-12">
-        <div className="container text-center">
-          <p className="text-muted-foreground">
-            © 2025 Stellar Slayers Cricket Club. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

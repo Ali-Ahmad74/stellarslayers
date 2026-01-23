@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Users, BarChart3, Settings, Medal, GitCompare, Calendar, LayoutDashboard, Shield, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
 
 const navItems = [{
   path: '/',
@@ -37,6 +38,9 @@ const navItems = [{
 export function Header() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { teamSettings } = useTeamSettings();
+
+  const teamName = teamSettings?.team_name || 'Cricket Club';
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
@@ -44,18 +48,27 @@ export function Header() {
         {/* Top Bar */}
         <div className="flex items-center justify-between py-4 md:py-6">
           <Link to="/" className="flex items-center gap-3 group">
-            <motion.div 
+            <motion.div
               initial={{ rotate: -10, scale: 0.9 }}
               animate={{ rotate: 0, scale: 1 }}
-              whileHover={{ rotate: 10, scale: 1.1 }}
+              whileHover={{ rotate: 10, scale: 1.05 }}
               transition={{ type: "spring", stiffness: 200 }}
               className="text-3xl md:text-4xl"
             >
-              🏏
+              {teamSettings?.team_logo_url ? (
+                <img
+                  src={teamSettings.team_logo_url}
+                  alt={`${teamName} logo`}
+                  className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover border border-border"
+                  loading="lazy"
+                />
+              ) : (
+                <span aria-hidden>🏏</span>
+              )}
             </motion.div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold tracking-wider uppercase text-foreground font-display group-hover:text-primary transition-colors">
-                Stellar Slayers
+                {teamName}
               </h1>
               <span className="hidden md:block text-xs text-muted-foreground tracking-widest uppercase">
                 Cricket Rankings
