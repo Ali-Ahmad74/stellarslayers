@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RankingPlayer, PlayerRole } from '@/types/cricket';
+import type { ScoringSettings } from '@/hooks/useScoringSettings';
 
 export interface PlayerStats {
   matches: number;
@@ -47,28 +48,32 @@ export interface PlayerWithStats {
 }
 
 // ICC-style points calculation with milestones and bonuses
-export function calculateICCPoints(stats: PlayerStats | null): ICCPoints {
+export function calculateICCPoints(stats: PlayerStats | null, scoring?: Partial<ScoringSettings> | null): ICCPoints {
   if (!stats) {
     return { battingPoints: 0, bowlingPoints: 0, fieldingPoints: 0, totalPoints: 0 };
   }
+
+  const s = scoring ?? {};
 
   // === BATTING POINTS ===
   let battingPoints = 0;
   if (stats.total_runs > 0 || stats.total_balls > 0) {
     // Base points
-    battingPoints += stats.total_runs; // 1 point per run
-    battingPoints += stats.fours * 2; // +2 per four
-    battingPoints += stats.sixes * 3; // +3 per six
+    battingPoints += stats.total_runs * (Number(s.batting_run_points ?? 1));
+    battingPoints += stats.fours * (Number(s.batting_four_points ?? 2));
+    battingPoints += stats.sixes * (Number(s.batting_six_points ?? 3));
     
     // Milestone bonuses (aggregate counts)
-    battingPoints += stats.thirties * 5; // +5 per 30+ innings
-    battingPoints += stats.fifties * 10; // +10 per 50+ innings
-    battingPoints += stats.hundreds * 20; // +20 per 100+ innings
+    battingPoints += stats.thirties * (Number(s.batting_thirty_bonus ?? 5));
+    battingPoints += stats.fifties * (Number(s.batting_fifty_bonus ?? 10));
+    battingPoints += stats.hundreds * (Number(s.batting_hundred_bonus ?? 20));
     
     // Strike rate bonus: (SR - 100) / 5, capped at 30
     if (stats.total_balls > 0) {
       const strikeRate = (stats.total_runs / stats.total_balls) * 100;
-      const srBonus = Math.max(0, Math.min(30, (strikeRate - 100) / 5));
+      const srCap = Number(s.batting_sr_bonus_cap ?? 30);
+      const srDiv = Number(s.batting_sr_bonus_divisor ?? 5);
+      const srBonus = Math.max(0, Math.min(srCap, (strikeRate - 100) / srDiv));
       battingPoints += srBonus;
     }
   }
@@ -76,39 +81,46 @@ export function calculateICCPoints(stats: PlayerStats | null): ICCPoints {
   // === BOWLING POINTS ===
   let bowlingPoints = 0;
   if (stats.wickets > 0 || stats.bowling_balls > 0) {
-    bowlingPoints += stats.wickets * 10; // +10 per wicket
-    bowlingPoints += stats.maidens * 5; // +5 per maiden
+    bowlingPoints += stats.wickets * (Number(s.bowling_wicket_points ?? 10));
+    bowlingPoints += stats.maidens * (Number(s.bowling_maiden_points ?? 5));
     
     // Milestone bonuses
-    bowlingPoints += stats.three_fers * 5; // +5 per 3fer
-    bowlingPoints += stats.five_fers * 10; // +10 per 5fer
+    bowlingPoints += stats.three_fers * (Number(s.bowling_threefer_bonus ?? 5));
+    bowlingPoints += stats.five_fers * (Number(s.bowling_fivefer_bonus ?? 10));
     
     // Penalties
-    bowlingPoints -= stats.no_balls * 1; // -1 per no-ball
-    bowlingPoints -= stats.wides * 1; // -1 per wide
+    bowlingPoints -= stats.no_balls * (Number(s.bowling_noball_penalty ?? 1));
+    bowlingPoints -= stats.wides * (Number(s.bowling_wide_penalty ?? 1));
     
     // Economy bonus: (8 - economy) * 3, capped at 25
     if (stats.bowling_balls > 0) {
       const overs = stats.bowling_balls / 6;
       const economy = stats.runs_conceded / overs;
-      const ecoBonus = Math.max(0, Math.min(25, (8 - economy) * 3));
+      const target = Number(s.bowling_eco_target ?? 8);
+      const mult = Number(s.bowling_eco_bonus_multiplier ?? 3);
+      const cap = Number(s.bowling_eco_bonus_cap ?? 25);
+      const ecoBonus = Math.max(0, Math.min(cap, (target - economy) * mult));
       bowlingPoints += ecoBonus;
     }
   }
 
   // === FIELDING POINTS ===
   let fieldingPoints = 0;
-  fieldingPoints += stats.catches * 5; // +5 per catch
-  fieldingPoints += stats.runouts * 7; // +7 per runout
-  fieldingPoints += stats.stumpings * 7; // +7 per stumping
-  fieldingPoints -= stats.dropped_catches * 5; // -5 per dropped catch
+  fieldingPoints += stats.catches * (Number(s.fielding_catch_points ?? 5));
+  fieldingPoints += stats.runouts * (Number(s.fielding_runout_points ?? 7));
+  fieldingPoints += stats.stumpings * (Number(s.fielding_stumping_points ?? 7));
+  fieldingPoints -= stats.dropped_catches * (Number(s.fielding_dropped_catch_penalty ?? 5));
 
   // Ensure non-negative
   battingPoints = Math.max(0, battingPoints);
   bowlingPoints = Math.max(0, bowlingPoints);
   fieldingPoints = Math.max(0, fieldingPoints);
 
-  const totalPoints = Math.round((battingPoints + bowlingPoints + fieldingPoints) * 10) / 10;
+  const bw = Number(s.batting_weight ?? 0.4);
+  const boww = Number(s.bowling_weight ?? 0.35);
+  const fw = Number(s.fielding_weight ?? 0.25);
+  const totalWeighted = battingPoints * bw + bowlingPoints * boww + fieldingPoints * fw;
+  const totalPoints = Math.round(totalWeighted * 10) / 10;
 
   return {
     battingPoints: Math.round(battingPoints * 10) / 10,
@@ -122,6 +134,8 @@ export function usePlayerRankings() {
   const [players, setPlayers] = useState<PlayerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [scoring, setScoring] = useState<ScoringSettings | null>(null);
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -142,6 +156,16 @@ export function usePlayerRankings() {
         .select('*');
 
       if (statsError) throw statsError;
+
+      // Fetch scoring settings (single-row)
+      const { data: scoringData, error: scoringError } = await supabase
+        .from('scoring_settings')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (scoringError) throw scoringError;
+      setScoring(scoringData as any);
 
       // Combine players with their stats and calculate ICC points
       const playersWithStats: PlayerWithStats[] = (playersData || []).map((player) => {
@@ -173,7 +197,7 @@ export function usePlayerRankings() {
           dropped_catches: Number((playerStats as any).dropped_catches) || 0,
         } : null;
 
-        const iccPoints = calculateICCPoints(stats);
+        const iccPoints = calculateICCPoints(stats, scoringData as any);
 
         return {
           id: player.id,
@@ -211,6 +235,9 @@ export function usePlayerRankings() {
         fetchPlayers();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fielding_inputs' }, () => {
+        fetchPlayers();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scoring_settings' }, () => {
         fetchPlayers();
       })
       .subscribe();

@@ -18,6 +18,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlayerRole } from '@/types/cricket';
+import { AdminGettingStartedWizard } from '@/components/AdminGettingStartedWizard';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { TeamLogoUpload } from '@/components/TeamLogoUpload';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ScoringSettingsPanel } from '@/components/ScoringSettingsPanel';
 import {
   Tooltip,
   TooltipContent,
@@ -79,6 +86,13 @@ const Admin = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('players');
+  const [hasAnyPerformance, setHasAnyPerformance] = useState(false);
+
+  const { teamSettings, updateTeamSettings } = useTeamSettings();
+  const [teamNameDraft, setTeamNameDraft] = useState('');
+  const [teamDescriptionDraft, setTeamDescriptionDraft] = useState('');
+  const [savingTeam, setSavingTeam] = useState(false);
   
   // Dialog states
   const [playerDialogOpen, setPlayerDialogOpen] = useState(false);
@@ -107,22 +121,51 @@ const Admin = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!teamSettings) return;
+    setTeamNameDraft(teamSettings.team_name || '');
+    setTeamDescriptionDraft(teamSettings.description || '');
+  }, [teamSettings]);
+
   const fetchData = async () => {
     setLoadingData(true);
     
-    const [playersRes, matchesRes, seasonsRes, tournamentsRes] = await Promise.all([
+    const [playersRes, matchesRes, seasonsRes, tournamentsRes, perfRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('matches').select('*').order('match_date', { ascending: false }),
       supabase.from('seasons').select('*').order('year', { ascending: false }),
       supabase.from('tournaments').select('*').order('start_date', { ascending: false }),
+      supabase.from('batting_inputs').select('id').limit(1),
     ]);
     
     if (playersRes.data) setPlayers(playersRes.data);
     if (matchesRes.data) setMatches(matchesRes.data as Match[]);
     if (seasonsRes.data) setSeasons(seasonsRes.data);
     if (tournamentsRes.data) setTournaments(tournamentsRes.data);
+    setHasAnyPerformance((perfRes.data?.length || 0) > 0);
     
     setLoadingData(false);
+  };
+
+  const handleSaveTeamSettings = async () => {
+    if (!isAdmin) return;
+    const name = teamNameDraft.trim();
+    if (!name) {
+      toast.error('Team name is required');
+      return;
+    }
+    setSavingTeam(true);
+    try {
+      await updateTeamSettings({
+        team_name: name,
+        description: teamDescriptionDraft.trim() || null,
+      });
+      toast.success('Team settings updated');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update team settings');
+    } finally {
+      setSavingTeam(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -558,54 +601,42 @@ const Admin = () => {
             </Button>
           </div>
 
-          {/* Getting Started Guide for new admins */}
-          {isAdmin && players.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-              <Card className="border-primary/30 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Info className="w-5 h-5 text-primary" />
-                    Getting Started Guide
-                  </CardTitle>
-                  <CardDescription>
-                    Follow these steps to set up your cricket ranking system
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ol className="space-y-3 text-sm">
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
-                      <div>
-                        <strong>Add Players</strong> - Start by adding your team members with their roles (Batsman, Bowler, etc.)
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
-                      <div>
-                        <strong>Create a Season</strong> - Set up your current season to organize matches
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/60 text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
-                      <div>
-                        <strong>Add Matches</strong> - Record your matches with opponents and scores
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/40 text-primary-foreground flex items-center justify-center text-xs font-bold">4</span>
-                      <div>
-                        <strong>Enter Performance Data</strong> - Add batting, bowling, and fielding stats for each player per match
-                      </div>
-                    </li>
-                  </ol>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+          <AdminGettingStartedWizard
+            isAdmin={isAdmin}
+            seasonsCount={seasons.length}
+            playersCount={players.length}
+            tournamentsCount={tournaments.length}
+            matchesCount={matches.length}
+            hasAnyPerformance={hasAnyPerformance}
+            onGoToStep={(step) => {
+              switch (step) {
+                case 'season':
+                  setActiveTab('seasons');
+                  setEditingSeason(undefined);
+                  setSeasonDialogOpen(true);
+                  break;
+                case 'players':
+                  setActiveTab('players');
+                  setEditingPlayer(undefined);
+                  setPlayerDialogOpen(true);
+                  break;
+                case 'tournament':
+                  setActiveTab('tournaments');
+                  setEditingTournament(undefined);
+                  setTournamentDialogOpen(true);
+                  break;
+                case 'match':
+                  setActiveTab('matches');
+                  setEditingMatch(undefined);
+                  setMatchDialogOpen(true);
+                  break;
+                case 'performance':
+                  setActiveTab('performance');
+                  setPerformanceDialogOpen(true);
+                  break;
+              }
+            }}
+          />
 
           {!isAdmin && (
             <Card className="mb-8 border-amber-500/50 bg-amber-500/10">
@@ -647,7 +678,7 @@ const Admin = () => {
             ))}
           </div>
 
-          <Tabs defaultValue="players" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full justify-start mb-6 bg-card border border-border shadow-md rounded-xl p-1.5 h-auto flex-wrap gap-1">
               <TabsTrigger 
                 value="players" 
@@ -683,6 +714,20 @@ const Admin = () => {
               >
                 <CalendarDays className="w-4 h-4 mr-2" />
                 Seasons
+              </TabsTrigger>
+              <TabsTrigger 
+                value="team"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Team Settings
+              </TabsTrigger>
+              <TabsTrigger 
+                value="scoring"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
+              >
+                <Info className="w-4 h-4 mr-2" />
+                Scoring
               </TabsTrigger>
             </TabsList>
 
@@ -1067,6 +1112,72 @@ const Admin = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="team">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Settings</CardTitle>
+                  <CardDescription>Manage team name, description, and logo</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col md:flex-row items-start gap-6">
+                    <TeamLogoUpload
+                      currentLogoUrl={teamSettings?.team_logo_url || null}
+                      onLogoChange={() => {
+                        // upload component updates backend; team settings are kept in sync via realtime.
+                      }}
+                      isAdmin={isAdmin}
+                    />
+                    <div className="flex-1 grid gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="admin-team-name">Team name</Label>
+                        <Input
+                          id="admin-team-name"
+                          value={teamNameDraft}
+                          onChange={(e) => setTeamNameDraft(e.target.value)}
+                          maxLength={80}
+                          placeholder="e.g., City Strikers"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="admin-team-desc">Description</Label>
+                        <Textarea
+                          id="admin-team-desc"
+                          value={teamDescriptionDraft}
+                          onChange={(e) => setTeamDescriptionDraft(e.target.value)}
+                          maxLength={300}
+                          className="min-h-[100px]"
+                          placeholder="Shown on the Team page"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={savingTeam}
+                            onClick={() => {
+                              setTeamNameDraft(teamSettings?.team_name || '');
+                              setTeamDescriptionDraft(teamSettings?.description || '');
+                            }}
+                          >
+                            Reset
+                          </Button>
+                          <Button disabled={savingTeam} onClick={handleSaveTeamSettings}>
+                            {savingTeam ? 'Saving…' : 'Save'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="scoring">
+              <ScoringSettingsPanel />
             </TabsContent>
           </Tabs>
         </motion.div>
