@@ -380,6 +380,7 @@ const PlayerProfile = () => {
           onOpenChange={setShareOpen}
           player={player}
           teamName={teamSettings?.team_name}
+          teamSettings={teamSettings}
           scoringSettings={scoringSettings}
         />
       )}

@@ -16,11 +16,24 @@ interface ShareablePlayerCardProps {
   };
   format?: 'story' | 'square' | 'wide';
   teamName?: string;
+  teamLogoUrl?: string | null;
   scoringSettings?: Partial<ScoringSettings> | null;
+  watermarkEnabled?: boolean;
+  watermarkHandle?: string | null;
+  watermarkPosition?: string;
 }
 
 export const ShareablePlayerCard = forwardRef<HTMLDivElement, ShareablePlayerCardProps>(
-  ({ player, format = 'story', teamName = 'Cricket Club', scoringSettings }, ref) => {
+  ({ 
+    player, 
+    format = 'story', 
+    teamName = 'Cricket Club', 
+    teamLogoUrl = null,
+    scoringSettings,
+    watermarkEnabled = false,
+    watermarkHandle = null,
+    watermarkPosition = 'bottom-right',
+  }, ref) => {
     const { stats } = player;
     const iccPoints = calculateICCPoints(stats, scoringSettings);
 
