@@ -499,6 +499,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: number
+          tagline: string | null
           team_logo_url: string | null
           team_name: string
           updated_at: string
@@ -511,6 +512,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: number
+          tagline?: string | null
           team_logo_url?: string | null
           team_name?: string
           updated_at?: string
@@ -523,6 +525,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: number
+          tagline?: string | null
           team_logo_url?: string | null
           team_name?: string
           updated_at?: string
