@@ -112,6 +112,53 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     [rows],
   );
 
+  const summary = useMemo(() => {
+    let runs = 0;
+    let balls = 0;
+    let outs = 0;
+    let fours = 0;
+    let sixes = 0;
+    let wickets = 0;
+    let catches = 0;
+    let runouts = 0;
+    let wides = 0;
+    let noBalls = 0;
+
+    for (const p of players) {
+      const r = rows[p.id];
+      if (!r?.include) continue;
+
+      runs += toInt(r.batting.runs);
+      balls += toInt(r.batting.balls);
+      fours += toInt(r.batting.fours);
+      sixes += toInt(r.batting.sixes);
+      if (r.batting.out) outs += 1;
+
+      wickets += toInt(r.bowling.wickets);
+      wides += toInt(r.bowling.wides);
+      noBalls += toInt(r.bowling.no_balls);
+
+      catches += toInt(r.fielding.catches);
+      runouts += toInt(r.fielding.runouts);
+    }
+
+    const extras = wides + noBalls;
+
+    return {
+      runs,
+      balls,
+      outs,
+      fours,
+      sixes,
+      wickets,
+      catches,
+      runouts,
+      wides,
+      noBalls,
+      extras,
+    };
+  }, [players, rows]);
+
   const handleToggleAll = (include: boolean) => {
     setRows((prev) => {
       const next: Record<number, DraftRow> = {};
@@ -230,6 +277,61 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
         </div>
 
         <Separator />
+
+        <Card>
+          <CardHeader className="py-4">
+            <CardTitle className="text-base font-display">Match Summary (Live)</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+              <div>
+                <div className="text-xs text-muted-foreground">Runs</div>
+                <div className="text-lg font-semibold">{summary.runs}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Balls</div>
+                <div className="text-lg font-semibold">{summary.balls}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Outs</div>
+                <div className="text-lg font-semibold">{summary.outs}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">4s / 6s</div>
+                <div className="text-lg font-semibold">{summary.fours} / {summary.sixes}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Wickets</div>
+                <div className="text-lg font-semibold">{summary.wickets}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Catches / Runouts</div>
+                <div className="text-lg font-semibold">{summary.catches} / {summary.runouts}</div>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Extras (derived)</div>
+                <div className="text-sm text-muted-foreground">Wides + No-balls</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Wides</div>
+                <div className="text-base font-semibold">{summary.wides}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">No-balls</div>
+                <div className="text-base font-semibold">{summary.noBalls}</div>
+              </div>
+              <div className="md:col-span-3">
+                <div className="text-xs text-muted-foreground">Total extras</div>
+                <div className="text-lg font-semibold">{summary.extras}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <ScrollArea className="h-[520px] rounded-lg border border-border">
           <div className="min-w-[1200px]">
