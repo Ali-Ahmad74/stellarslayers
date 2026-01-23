@@ -181,7 +181,7 @@ const TeamProfile = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2 font-display">
             {teamSettings?.team_name || 'Stellar Slayers'}
           </h1>
-          <p className="text-xl text-primary font-semibold mb-4">Cricket Club</p>
+          <p className="text-xl text-primary font-semibold mb-4">Stellar Slayers</p>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             {teamSettings?.description || 'A passionate cricket team dedicated to excellence, sportsmanship, and the love of the game. Founded with a vision to nurture talent and compete at the highest levels.'}
           </p>
