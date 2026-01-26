@@ -462,9 +462,9 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           }}
         >
           <div className="min-w-[1200px]">
-            <div className="sticky top-0 z-10 bg-background border-b border-border">
-              <div className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] px-3 py-2 text-xs font-semibold text-muted-foreground">
-                <div className="sticky left-0 z-20 bg-background pr-2">Player</div>
+            <div className="sticky top-0 z-20 bg-background border-b border-border">
+              <div className="grid grid-cols-[240px_repeat(5,110px)_repeat(8,110px)_repeat(4,110px)] items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                <div className="sticky left-0 z-20 bg-background pr-2 border-r border-border">Player</div>
                 <div>Runs</div>
                 <div>Balls</div>
                 <div>4s</div>
