@@ -10,6 +10,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronLeft, ChevronRight, AlertTriangle, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 type Player = { id: number; name: string };
@@ -94,9 +97,21 @@ function emptyDraftRow(): DraftRow {
   };
 }
 
+type ValidationIssue = {
+  playerId: number;
+  playerName: string;
+  category: "batting" | "bowling" | "fielding";
+  severity: "warning" | "error";
+  message: string;
+  quickFix?: () => void;
+  quickFixLabel?: string;
+};
+
 export function MatchEntryGrid({ players, matches }: { players: Player[]; matches: Match[] }) {
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [isPasting, setIsPasting] = useState(false);
+
   const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem("bulkGridAutoScroll");
@@ -104,6 +119,16 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       return raw === "true";
     } catch {
       return true;
+    }
+  });
+
+  const [showOnlySelected, setShowOnlySelected] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem("bulkGridShowOnlySelected");
+      if (raw === null) return false;
+      return raw === "true";
+    } catch {
+      return false;
     }
   });
 
@@ -115,12 +140,143 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     }
   }, [autoScrollEnabled]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("bulkGridShowOnlySelected", String(showOnlySelected));
+    } catch {
+      // ignore
+    }
+  }, [showOnlySelected]);
+
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
     [matches],
   );
 
   const [matchId, setMatchId] = useState<string>(sortedMatches[0]?.id ? String(sortedMatches[0].id) : "");
+
+  const currentMatchIndex = useMemo(() => {
+    return sortedMatches.findIndex((m) => String(m.id) === matchId);
+  }, [sortedMatches, matchId]);
+
+  const handlePrevMatch = () => {
+    if (currentMatchIndex > 0) {
+      setMatchId(String(sortedMatches[currentMatchIndex - 1].id));
+    }
+  };
+
+  const handleNextMatch = () => {
+    if (currentMatchIndex < sortedMatches.length - 1) {
+      setMatchId(String(sortedMatches[currentMatchIndex + 1].id));
+    }
+  };
+
+  const getFieldFromColumnIndex = (colIdx: number): { category: "batting" | "bowling" | "fielding"; field: string } | null => {
+    if (colIdx === 0) return { category: "batting", field: "runs" };
+    if (colIdx === 1) return { category: "batting", field: "balls" };
+    if (colIdx === 2) return { category: "batting", field: "fours" };
+    if (colIdx === 3) return { category: "batting", field: "sixes" };
+    if (colIdx === 4) return null; // out checkbox
+    if (colIdx === 5) return { category: "bowling", field: "balls" };
+    if (colIdx === 6) return { category: "bowling", field: "runs_conceded" };
+    if (colIdx === 7) return { category: "bowling", field: "wickets" };
+    if (colIdx === 8) return { category: "bowling", field: "maidens" };
+    if (colIdx === 9) return { category: "bowling", field: "wides" };
+    if (colIdx === 10) return { category: "bowling", field: "no_balls" };
+    if (colIdx === 11) return { category: "bowling", field: "fours_conceded" };
+    if (colIdx === 12) return { category: "bowling", field: "sixes_conceded" };
+    if (colIdx === 13) return { category: "fielding", field: "catches" };
+    if (colIdx === 14) return { category: "fielding", field: "runouts" };
+    if (colIdx === 15) return { category: "fielding", field: "stumpings" };
+    if (colIdx === 16) return { category: "fielding", field: "dropped_catches" };
+    return null;
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const activeElement = document.activeElement;
+    if (!activeElement || activeElement.tagName !== "INPUT") return;
+
+    let focusedPlayerId: number | null = null;
+    let focusedColIdx: number | null = null;
+    for (const [key, el] of Object.entries(inputRefs.current)) {
+      if (el === activeElement) {
+        const [pid, col] = key.split(":");
+        focusedPlayerId = Number(pid);
+        focusedColIdx = Number(col);
+        break;
+      }
+    }
+
+    if (focusedPlayerId === null || focusedColIdx === null) return;
+
+    e.preventDefault();
+    setIsPasting(true);
+
+    try {
+      const text = e.clipboardData.getData("text");
+      if (!text) return;
+
+      const rows = text.trim().split("\n").map((row) => row.split("\t"));
+      
+      if (rows.length === 1 && rows[0].length === 1) {
+        const value = rows[0][0];
+        const fieldInfo = getFieldFromColumnIndex(focusedColIdx);
+        if (!fieldInfo) return;
+
+        const { category, field } = fieldInfo;
+        setRows((prev) => ({
+          ...prev,
+          [focusedPlayerId]: {
+            ...prev[focusedPlayerId],
+            [category]: { ...prev[focusedPlayerId][category], [field]: value },
+          },
+        }));
+        return;
+      }
+
+      const startPlayerIndex = displayedPlayers.findIndex((p) => p.id === focusedPlayerId);
+      if (startPlayerIndex === -1) return;
+
+      setRows((prev) => {
+        const next = { ...prev };
+        
+        for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+          const targetPlayerIndex = startPlayerIndex + rowIdx;
+          if (targetPlayerIndex >= displayedPlayers.length) break;
+
+          const targetPlayer = displayedPlayers[targetPlayerIndex];
+          const rowData = rows[rowIdx];
+
+          if (!next[targetPlayer.id].include) {
+            next[targetPlayer.id] = { ...next[targetPlayer.id], include: true };
+          }
+
+          for (let colIdx = 0; colIdx < rowData.length; colIdx++) {
+            const targetColIdx = focusedColIdx + colIdx;
+            const value = rowData[colIdx];
+            
+            const fieldInfo = getFieldFromColumnIndex(targetColIdx);
+            if (!fieldInfo) continue;
+
+            const { category, field } = fieldInfo;
+            next[targetPlayer.id] = {
+              ...next[targetPlayer.id],
+              [category]: { ...next[targetPlayer.id][category], [field]: value },
+            };
+          }
+        }
+        
+        return next;
+      });
+
+      toast.success(`Pasted ${rows.length} row(s) × ${rows[0].length} column(s)`);
+    } catch (error) {
+      console.error("Paste error:", error);
+      toast.error("Failed to paste data");
+    } finally {
+      setIsPasting(false);
+    }
+  };
 
   useEffect(() => {
     // When the available match list changes (e.g., filtering by series), keep selection valid.
@@ -191,6 +347,113 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       extras,
     };
   }, [players, rows]);
+
+  const displayedPlayers = useMemo(() => {
+    if (!showOnlySelected) return players;
+    return players.filter((p) => rows[p.id]?.include);
+  }, [players, rows, showOnlySelected]);
+
+  const validationIssues = useMemo<ValidationIssue[]>(() => {
+    const issues: ValidationIssue[] = [];
+
+    for (const p of displayedPlayers) {
+      const r = rows[p.id];
+      if (!r?.include) continue;
+
+      const runs = toInt(r.batting.runs);
+      const balls = toInt(r.batting.balls);
+      const fours = toInt(r.batting.fours);
+      const sixes = toInt(r.batting.sixes);
+
+      // Batting validations
+      if (runs > 0 && balls === 0) {
+        issues.push({
+          playerId: p.id,
+          playerName: p.name,
+          category: "batting",
+          severity: "error",
+          message: `${p.name}: Runs (${runs}) without balls faced`,
+          quickFix: () => {
+            setRows((prev) => ({
+              ...prev,
+              [p.id]: {
+                ...prev[p.id],
+                batting: { ...prev[p.id].batting, balls: String(runs) },
+              },
+            }));
+          },
+          quickFixLabel: "Set balls = runs",
+        });
+      }
+
+      if (balls > 0 && runs > balls) {
+        issues.push({
+          playerId: p.id,
+          playerName: p.name,
+          category: "batting",
+          severity: "warning",
+          message: `${p.name}: Runs (${runs}) > Balls (${balls})`,
+        });
+      }
+
+      if (balls > 0) {
+        const sr = (runs / balls) * 100;
+        if (sr > 300) {
+          issues.push({
+            playerId: p.id,
+            playerName: p.name,
+            category: "batting",
+            severity: "warning",
+            message: `${p.name}: Very high strike rate (${sr.toFixed(1)})`,
+          });
+        }
+      }
+
+      if (fours + sixes > runs) {
+        issues.push({
+          playerId: p.id,
+          playerName: p.name,
+          category: "batting",
+          severity: "error",
+          message: `${p.name}: Boundary runs (${fours * 4 + sixes * 6}) exceed total runs (${runs})`,
+        });
+      }
+
+      // Bowling validations
+      const bowlBalls = toInt(r.bowling.balls);
+      const runsConceded = toInt(r.bowling.runs_conceded);
+      const wickets = toInt(r.bowling.wickets);
+
+      if (bowlBalls > 0) {
+        const overs = bowlBalls / 6;
+        const economy = overs > 0 ? runsConceded / overs : 0;
+        if (economy > 25) {
+          issues.push({
+            playerId: p.id,
+            playerName: p.name,
+            category: "bowling",
+            severity: "warning",
+            message: `${p.name}: Very high economy rate (${economy.toFixed(1)})`,
+          });
+        }
+      }
+
+      if (runsConceded > 0 && bowlBalls === 0) {
+        issues.push({
+          playerId: p.id,
+          playerName: p.name,
+          category: "bowling",
+          severity: "error",
+          message: `${p.name}: Runs conceded (${runsConceded}) without balls bowled`,
+        });
+      }
+    }
+
+    return issues;
+  }, [displayedPlayers, rows]);
+
+  const errorCount = validationIssues.filter((i) => i.severity === "error").length;
+  const warningCount = validationIssues.filter((i) => i.severity === "warning").length;
 
   const handleToggleAll = (include: boolean) => {
     setRows((prev) => {
@@ -352,18 +615,80 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Match</Label>
-            <Select value={matchId} onValueChange={setMatchId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select match" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedMatches.map((m) => (
-                  <SelectItem key={m.id} value={String(m.id)}>
-                    {new Date(m.match_date).toLocaleDateString()} {m.venue ? `• ${m.venue}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handlePrevMatch}
+                      disabled={currentMatchIndex <= 0}
+                      className="shrink-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {currentMatchIndex > 0 && sortedMatches[currentMatchIndex - 1] ? (
+                      <div>
+                        <div className="font-semibold">Previous Match</div>
+                        <div className="text-xs">
+                          {new Date(sortedMatches[currentMatchIndex - 1].match_date).toLocaleDateString()}
+                          {sortedMatches[currentMatchIndex - 1].venue && ` • ${sortedMatches[currentMatchIndex - 1].venue}`}
+                        </div>
+                      </div>
+                    ) : (
+                      "No previous match"
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              <Select value={matchId} onValueChange={setMatchId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select match" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedMatches.map((m) => (
+                    <SelectItem key={m.id} value={String(m.id)}>
+                      {new Date(m.match_date).toLocaleDateString()} {m.venue ? `• ${m.venue}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleNextMatch}
+                      disabled={currentMatchIndex >= sortedMatches.length - 1}
+                      className="shrink-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {currentMatchIndex < sortedMatches.length - 1 && sortedMatches[currentMatchIndex + 1] ? (
+                      <div>
+                        <div className="font-semibold">Next Match</div>
+                        <div className="text-xs">
+                          {new Date(sortedMatches[currentMatchIndex + 1].match_date).toLocaleDateString()}
+                          {sortedMatches[currentMatchIndex + 1].venue && ` • ${sortedMatches[currentMatchIndex + 1].venue}`}
+                        </div>
+                      </div>
+                    ) : (
+                      "No next match"
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -375,12 +700,18 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
               <Button type="button" variant="outline" onClick={() => handleToggleAll(false)}>
                 Clear
               </Button>
-              <div className="text-sm text-muted-foreground">{selectedCount} selected</div>
+              <div className="text-sm text-muted-foreground">
+                {selectedCount} of {players.length} selected
+              </div>
             </div>
           </div>
 
           <div className="flex md:justify-end items-end">
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground">Show only selected</Label>
+                <Switch checked={showOnlySelected} onCheckedChange={setShowOnlySelected} />
+              </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground">Auto-scroll</Label>
                 <Switch checked={autoScrollEnabled} onCheckedChange={setAutoScrollEnabled} />
@@ -449,9 +780,82 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           </CardContent>
         </Card>
 
+        {validationIssues.length > 0 && (
+          <Collapsible defaultOpen={errorCount > 0}>
+            <Card className={errorCount > 0 ? "border-destructive" : "border-yellow-500"}>
+              <CollapsibleTrigger className="w-full">
+                <CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    {errorCount > 0 ? (
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    )}
+                    <CardTitle className="text-base font-display">
+                      Validation Issues ({validationIssues.length})
+                    </CardTitle>
+                    <div className="ml-auto flex gap-2 text-xs">
+                      {errorCount > 0 && (
+                        <span className="px-2 py-1 rounded-full bg-destructive/10 text-destructive-foreground font-semibold">
+                          {errorCount} error{errorCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {warningCount > 0 && (
+                        <span className="px-2 py-1 rounded-full bg-accent/10 text-accent-foreground font-semibold">
+                          {warningCount} warning{warningCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-4">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {validationIssues.map((issue, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-3 rounded-lg border ${
+                          issue.severity === "error"
+                            ? "bg-destructive/5 border-destructive/20"
+                            : "bg-accent/5 border-accent/20"
+                        }`}
+                      >
+                        {issue.severity === "error" ? (
+                          <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{issue.message}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {issue.category.charAt(0).toUpperCase() + issue.category.slice(1)}
+                          </div>
+                        </div>
+                        {issue.quickFix && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={issue.quickFix}
+                            className="shrink-0"
+                          >
+                            {issue.quickFixLabel}
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
+
         <ScrollArea
           ref={scrollAreaRef}
           className="h-[520px] rounded-lg border border-border overscroll-contain"
+          onPaste={handlePaste}
           onWheelCapture={(e) => {
             // Prevent the parent page from scrolling while using the grid.
             e.stopPropagation();
@@ -485,7 +889,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
               </div>
             </div>
 
-            {players.map((p, playerIndex) => {
+            {displayedPlayers.map((p, playerIndex) => {
               const r = rows[p.id] ?? emptyDraftRow();
               return (
                 <div

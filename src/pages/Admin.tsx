@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays, Trophy, Info } from 'lucide-react';
+import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays, Trophy, Info, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -1002,6 +1002,13 @@ const Admin = () => {
                 <Info className="w-4 h-4 mr-2" />
                 Scoring
               </TabsTrigger>
+              <TabsTrigger 
+                value="health"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 md:px-6 py-2.5 rounded-lg font-semibold"
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                Data Health
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="players">
@@ -1695,6 +1702,23 @@ const Admin = () => {
 
             <TabsContent value="scoring">
               <ScoringSettingsPanel />
+            </TabsContent>
+
+            <TabsContent value="health">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Data Health Dashboard</CardTitle>
+                  <CardDescription>Monitor and fix data quality issues</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p className="font-semibold mb-2">Data Health Monitoring</p>
+                    <p className="text-sm">Full data health analysis coming soon!</p>
+                    <p className="text-xs mt-4">This will detect orphaned records, incomplete matches, and data anomalies.</p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </motion.div>
