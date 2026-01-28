@@ -251,6 +251,30 @@ export type Database = {
           },
         ]
       }
+      match_templates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          player_ids: number[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          player_ids?: number[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          player_ids?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
