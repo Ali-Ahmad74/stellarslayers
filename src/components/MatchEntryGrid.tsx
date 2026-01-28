@@ -11,12 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, AlertTriangle, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle, AlertCircle, RotateCcw, RotateCw, BookmarkPlus, Upload } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 
 type Player = { id: number; name: string };
 type Match = { id: number; match_date: string; venue: string | null };
+
+type MatchTemplate = {
+  id: string;
+  name: string;
+  player_ids: number[];
+};
 
 const int0 = z.number().int().min(0);
 
@@ -108,6 +115,7 @@ type ValidationIssue = {
 };
 
 export function MatchEntryGrid({ players, matches }: { players: Player[]; matches: Match[] }) {
+  const gridHotkeysRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [isPasting, setIsPasting] = useState(false);
@@ -290,11 +298,136 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     }
   }, [sortedMatches, matchId]);
   const [saving, setSaving] = useState(false);
-  const [rows, setRows] = useState<Record<number, DraftRow>>(() => {
+
+  const initialRows = useMemo(() => {
     const init: Record<number, DraftRow> = {};
     for (const p of players) init[p.id] = emptyDraftRow();
     return init;
-  });
+  }, [players]);
+
+  const {
+    state: rows,
+    set: setRows,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useUndoRedo<Record<number, DraftRow>>(initialRows, 20);
+
+  // Ctrl/Cmd+Z and Ctrl/Cmd+Y hotkeys while focus is inside the grid
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      if (!gridHotkeysRef.current) return;
+
+      const active = document.activeElement;
+      if (!active || !gridHotkeysRef.current.contains(active)) return;
+
+      const key = e.key.toLowerCase();
+      const isUndo = key === "z" && !e.shiftKey;
+      const isRedo = key === "y" || (key === "z" && e.shiftKey);
+
+      if (isUndo) {
+        if (!canUndo) return;
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (isRedo) {
+        if (!canRedo) return;
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo, canUndo, canRedo]);
+
+  // Templates
+  const [templates, setTemplates] = useState<MatchTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateId, setTemplateId] = useState<string>("");
+  const [templateName, setTemplateName] = useState<string>("");
+
+  const fetchTemplates = async () => {
+    setTemplatesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("match_templates")
+        .select("id,name,player_ids")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      setTemplates((data as MatchTemplate[]) ?? []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load templates");
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyTemplate = () => {
+    if (!templateId) {
+      toast.error("Select a template first");
+      return;
+    }
+    const tmpl = templates.find((t) => t.id === templateId);
+    if (!tmpl) {
+      toast.error("Template not found");
+      return;
+    }
+
+    const setIds = new Set<number>(tmpl.player_ids || []);
+    setRows((prev) => {
+      const next: Record<number, DraftRow> = { ...prev };
+      for (const p of players) {
+        next[p.id] = { ...prev[p.id], include: setIds.has(p.id) };
+      }
+      return next;
+    });
+    toast.success(`Loaded template: ${tmpl.name}`);
+  };
+
+  const saveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name) {
+      toast.error("Template name is required");
+      return;
+    }
+
+    const playerIds = players
+      .filter((p) => rows[p.id]?.include)
+      .map((p) => p.id);
+
+    if (playerIds.length === 0) {
+      toast.error("Select at least 1 player");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("match_templates")
+        .upsert(
+          [{ name, player_ids: playerIds }],
+          {
+            onConflict: "name",
+          },
+        );
+      if (error) throw error;
+
+      toast.success("Template saved");
+      setTemplateName("");
+      await fetchTemplates();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save template");
+    }
+  };
 
   const selectedCount = useMemo(
     () => Object.values(rows).filter((r) => r.include).length,
@@ -607,11 +740,12 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-display">Bulk Match Entry (Grid)</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div ref={gridHotkeysRef}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display">Bulk Match Entry (Grid)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Match</Label>
@@ -708,6 +842,42 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
 
           <div className="flex md:justify-end items-end">
             <div className="flex items-center gap-3">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={undo}
+                      disabled={!canUndo}
+                      aria-label="Undo"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Undo (Ctrl/Cmd+Z)</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={redo}
+                      disabled={!canRedo}
+                      aria-label="Redo"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Redo (Ctrl/Cmd+Y)</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground">Show only selected</Label>
                 <Switch checked={showOnlySelected} onCheckedChange={setShowOnlySelected} />
@@ -718,6 +888,45 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
               </div>
               <Button onClick={handleSave} disabled={saving || selectedCount === 0 || !matchId}>
                 {saving ? "Saving…" : "Save all"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Lineup template</Label>
+            <div className="flex items-center gap-2">
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={templatesLoading ? "Loading…" : "Select template"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} ({t.player_ids?.length ?? 0})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" onClick={applyTemplate} disabled={!templateId}>
+                <Upload className="h-4 w-4" />
+                Load
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label>Save current selection</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="e.g. Top order + 4 bowlers"
+              />
+              <Button type="button" variant="outline" onClick={saveTemplate}>
+                <BookmarkPlus className="h-4 w-4" />
+                Save template
               </Button>
             </div>
           </div>
@@ -1008,7 +1217,8 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
             })}
           </div>
         </ScrollArea>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
