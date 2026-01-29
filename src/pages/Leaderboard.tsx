@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { RankBadge } from '@/components/RankBadge';
 import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { RankingSeasonFilter } from '@/components/RankingSeasonFilter';
+import { ExportButton } from '@/components/ExportButton';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { usePointHistory } from '@/hooks/usePointHistory';
 import { useBowlingRankingsBySeason } from '@/hooks/useBowlingRankingsBySeason';
@@ -21,6 +22,8 @@ import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SiteFooter } from '@/components/SiteFooter';
+import { exportPlayerStats, type PlayerExportData } from '@/lib/csv-export';
+
 type SortKey = 'totalPoints' | 'battingPoints' | 'bowlingPoints' | 'fieldingPoints' | 'weeklyChange' | 'monthlyChange';
 const Leaderboard = () => {
   const {
@@ -72,7 +75,34 @@ const Leaderboard = () => {
 
   const sharePlayer = players.find(p => p.id === sharePlayerId);
 
-  // Filter and sort players based on active tab (excludes batting/bowling/fielding which use season filters)
+  const handleExportPlayers = () => {
+    const exportData: PlayerExportData[] = players.map(p => {
+      const s = p.stats;
+      const sr = s && s.total_balls > 0 ? ((s.total_runs / s.total_balls) * 100).toFixed(2) : '0.00';
+      const avg = s && s.times_out > 0 ? (s.total_runs / s.times_out).toFixed(2) : (s?.total_runs?.toFixed(2) || '0.00');
+      const overs = s ? (s.bowling_balls / 6).toFixed(1) : '0.0';
+      const eco = s && s.bowling_balls > 0 ? (s.runs_conceded / (s.bowling_balls / 6)).toFixed(2) : '0.00';
+      return {
+        name: p.name,
+        role: p.role,
+        matches: s?.matches || 0,
+        runs: s?.total_runs || 0,
+        balls_faced: s?.total_balls || 0,
+        fours: s?.fours || 0,
+        sixes: s?.sixes || 0,
+        average: avg,
+        strike_rate: sr,
+        wickets: s?.wickets || 0,
+        runs_conceded: s?.runs_conceded || 0,
+        overs_bowled: overs,
+        economy: eco,
+        catches: s?.catches || 0,
+        runouts: s?.runouts || 0,
+        stumpings: s?.stumpings || 0,
+      };
+    });
+    exportPlayerStats(exportData);
+  };
   const getLeaderboardData = () => {
     // For category tabs, return empty - we use season-filtered rankings instead
     if (activeTab === 'batting' || activeTab === 'bowling' || activeTab === 'fielding') {
@@ -271,10 +301,13 @@ const Leaderboard = () => {
              
             </h1>
             <p className="text-muted-foreground">Complete rankings with points system</p>
-            {isAdmin && <Button variant="outline" size="sm" className="mt-4" onClick={handleRecordPoints} disabled={isRecording}>
-                {isRecording ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                Record Today's Points
-              </Button>}
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <ExportButton onExportPlayers={handleExportPlayers} disabled={loading || players.length === 0} />
+              {isAdmin && <Button variant="outline" size="sm" onClick={handleRecordPoints} disabled={isRecording}>
+                  {isRecording ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Record Today's Points
+                </Button>}
+            </div>
           </div>
 
           {/* Top 3 Podium */}

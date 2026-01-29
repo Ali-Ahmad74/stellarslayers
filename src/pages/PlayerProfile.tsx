@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { RoleBadge } from '@/components/RoleBadge';
+import { PlayerAchievements } from '@/components/PlayerAchievements';
+import { FormAnalysisChart } from '@/components/FormAnalysisChart';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateICCPoints, PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
+import { useFormAnalysis } from '@/hooks/useFormAnalysis';
 import type { PlayerRole } from '@/types/cricket';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
@@ -28,9 +31,13 @@ const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
+  const [battingRecords, setBattingRecords] = useState<any[]>([]);
+  const [bowlingRecords, setBowlingRecords] = useState<any[]>([]);
   const { settings: scoringSettings } = useScoringSettings();
   const { teamSettings } = useTeamSettings();
   const [shareOpen, setShareOpen] = useState(false);
+  
+  const { formData, stats: formStats } = useFormAnalysis(battingRecords, bowlingRecords);
 
   useEffect(() => {
     const fetchPlayer = async () => {
@@ -86,6 +93,39 @@ const PlayerProfile = () => {
         role: playerData.role as PlayerRole,
         stats,
       });
+
+      // Fetch performance records for form analysis
+      const [{ data: batData }, { data: bowlData }] = await Promise.all([
+        supabase
+          .from('batting_inputs')
+          .select('match_id, runs, balls, matches!inner(match_date)')
+          .eq('player_id', Number(id))
+          .order('match_id', { ascending: true }),
+        supabase
+          .from('bowling_inputs')
+          .select('match_id, wickets, runs_conceded, balls, matches!inner(match_date)')
+          .eq('player_id', Number(id))
+          .order('match_id', { ascending: true }),
+      ]);
+
+      setBattingRecords(
+        (batData || []).map((r: any) => ({
+          match_id: r.match_id,
+          match_date: r.matches?.match_date,
+          runs: r.runs,
+          balls: r.balls,
+        }))
+      );
+      setBowlingRecords(
+        (bowlData || []).map((r: any) => ({
+          match_id: r.match_id,
+          match_date: r.matches?.match_date,
+          wickets: r.wickets,
+          runs_conceded: r.runs_conceded,
+          bowling_balls: r.balls,
+        }))
+      );
+
       setLoading(false);
     };
 
@@ -370,6 +410,24 @@ const PlayerProfile = () => {
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
+
+          {/* Achievements */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <PlayerAchievements stats={stats || {}} />
+          </motion.div>
+
+          {/* Form Analysis */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <FormAnalysisChart data={formData} stats={formStats} type="batting" />
           </motion.div>
         </div>
       </main>
