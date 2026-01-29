@@ -20,7 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlayerRole } from '@/types/cricket';
-import { AdminGettingStartedWizard } from '@/components/AdminGettingStartedWizard';
+
 import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { TeamLogoUpload } from '@/components/TeamLogoUpload';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,6 @@ const Admin = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('players');
-  const [hasAnyPerformance, setHasAnyPerformance] = useState(false);
 
   const { teamSettings, updateTeamSettings } = useTeamSettings();
   const [teamNameDraft, setTeamNameDraft] = useState('');
@@ -187,13 +186,12 @@ const Admin = () => {
   const fetchData = async () => {
     setLoadingData(true);
     
-    const [playersRes, matchesRes, seasonsRes, tournamentsRes, seriesRes, perfRes] = await Promise.all([
+    const [playersRes, matchesRes, seasonsRes, tournamentsRes, seriesRes] = await Promise.all([
       supabase.from('players').select('*').order('name'),
       supabase.from('matches').select('*').order('match_date', { ascending: false }),
       supabase.from('seasons').select('*').order('year', { ascending: false }),
       supabase.from('tournaments').select('*').order('start_date', { ascending: false }),
       supabase.from('series').select('*').order('is_active', { ascending: false }).order('start_date', { ascending: false }).order('created_at', { ascending: false }),
-      supabase.from('batting_inputs').select('id').limit(1),
     ]);
     
     if (playersRes.data) setPlayers(playersRes.data);
@@ -201,7 +199,6 @@ const Admin = () => {
     if (seasonsRes.data) setSeasons(seasonsRes.data);
     if (tournamentsRes.data) setTournaments(tournamentsRes.data);
     if (seriesRes.data) setSeries(seriesRes.data as any);
-    setHasAnyPerformance((perfRes.data?.length || 0) > 0);
     
     setLoadingData(false);
   };
@@ -866,53 +863,6 @@ const Admin = () => {
             </Button>
           </div>
 
-          <AdminGettingStartedWizard
-            isAdmin={isAdmin}
-            seasonsCount={seasons.length}
-            playersCount={players.length}
-            tournamentsCount={tournaments.length}
-            matchesCount={matches.length}
-            hasAnyPerformance={hasAnyPerformance}
-            onGoToStep={(step, intent) => {
-              // "view" = navigate to the tab only; "add" = open the create dialog for that step.
-              switch (step) {
-                case 'season':
-                  setActiveTab('seasons');
-                  if (intent === 'add') {
-                    setEditingSeason(undefined);
-                    setSeasonDialogOpen(true);
-                  }
-                  break;
-                case 'players':
-                  setActiveTab('players');
-                  if (intent === 'add') {
-                    setEditingPlayer(undefined);
-                    setPlayerDialogOpen(true);
-                  }
-                  break;
-                case 'tournament':
-                  setActiveTab('tournaments');
-                  if (intent === 'add') {
-                    setEditingTournament(undefined);
-                    setTournamentDialogOpen(true);
-                  }
-                  break;
-                case 'match':
-                  setActiveTab('matches');
-                  if (intent === 'add') {
-                    setEditingMatch(undefined);
-                    setMatchDialogOpen(true);
-                  }
-                  break;
-                case 'performance':
-                  setActiveTab('performance');
-                  if (intent === 'add') {
-                    setPerformanceDialogOpen(true);
-                  }
-                  break;
-              }
-            }}
-          />
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
