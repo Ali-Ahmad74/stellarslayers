@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navItems = [{
   path: '/leaderboard',
@@ -79,6 +80,8 @@ export function Header() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
+            
             {isAdmin && (
               <Link to="/admin" className="hidden md:block">
                 <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:border-primary hover:bg-primary/10">
