@@ -23,6 +23,7 @@ import { useScoringSettings } from '@/hooks/useScoringSettings';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SiteFooter } from '@/components/SiteFooter';
 import { exportPlayerStats, type PlayerExportData } from '@/lib/csv-export';
+
 type SortKey = 'totalPoints' | 'battingPoints' | 'bowlingPoints' | 'fieldingPoints' | 'weeklyChange' | 'monthlyChange';
 const Leaderboard = () => {
   const {
@@ -38,12 +39,9 @@ const Leaderboard = () => {
   const {
     isAdmin
   } = useAuth();
-  const {
-    teamSettings
-  } = useTeamSettings();
-  const {
-    settings: scoringSettings
-  } = useScoringSettings();
+  const { teamSettings } = useTeamSettings();
+  const { settings: scoringSettings } = useScoringSettings();
+
   const [sortKey, setSortKey] = useState<SortKey>('totalPoints');
   const [activeTab, setActiveTab] = useState('overall');
   const [isRecording, setIsRecording] = useState(false);
@@ -74,12 +72,14 @@ const Leaderboard = () => {
     await recordCurrentPoints();
     setIsRecording(false);
   };
+
   const sharePlayer = players.find(p => p.id === sharePlayerId);
+
   const handleExportPlayers = () => {
     const exportData: PlayerExportData[] = players.map(p => {
       const s = p.stats;
-      const sr = s && s.total_balls > 0 ? (s.total_runs / s.total_balls * 100).toFixed(2) : '0.00';
-      const avg = s && s.times_out > 0 ? (s.total_runs / s.times_out).toFixed(2) : s?.total_runs?.toFixed(2) || '0.00';
+      const sr = s && s.total_balls > 0 ? ((s.total_runs / s.total_balls) * 100).toFixed(2) : '0.00';
+      const avg = s && s.times_out > 0 ? (s.total_runs / s.times_out).toFixed(2) : (s?.total_runs?.toFixed(2) || '0.00');
       const overs = s ? (s.bowling_balls / 6).toFixed(1) : '0.0';
       const eco = s && s.bowling_balls > 0 ? (s.runs_conceded / (s.bowling_balls / 6)).toFixed(2) : '0.00';
       return {
@@ -98,7 +98,7 @@ const Leaderboard = () => {
         economy: eco,
         catches: s?.catches || 0,
         runouts: s?.runouts || 0,
-        stumpings: s?.stumpings || 0
+        stumpings: s?.stumpings || 0,
       };
     });
     exportPlayerStats(exportData);
@@ -300,8 +300,14 @@ const Leaderboard = () => {
              
              
             </h1>
-            
-            
+            <p className="text-muted-foreground">Complete rankings with points system</p>
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <ExportButton onExportPlayers={handleExportPlayers} disabled={loading || players.length === 0} />
+              {isAdmin && <Button variant="outline" size="sm" onClick={handleRecordPoints} disabled={isRecording}>
+                  {isRecording ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Record Today's Points
+                </Button>}
+            </div>
           </div>
 
           {/* Top 3 Podium */}
@@ -603,7 +609,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
+                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -632,10 +638,15 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <Button variant="ghost" size="sm" onClick={e => {
-                          e.stopPropagation();
-                          setSharePlayerId(player.id);
-                        }} className="h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSharePlayerId(player.id);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
                                 <Share2 className="h-4 w-4" />
                               </Button>
                             </TableCell>
@@ -695,13 +706,22 @@ const Leaderboard = () => {
 
       <SiteFooter />
 
-      {sharePlayer && <SharePlayerCardDialog open={!!sharePlayerId} onOpenChange={open => !open && setSharePlayerId(null)} player={{
-      id: sharePlayer.id,
-      name: sharePlayer.name,
-      role: sharePlayer.role,
-      photo_url: sharePlayer.photo_url,
-      stats: sharePlayer.stats
-    }} teamName={teamSettings?.team_name} teamSettings={teamSettings} scoringSettings={scoringSettings} />}
+      {sharePlayer && (
+        <SharePlayerCardDialog
+          open={!!sharePlayerId}
+          onOpenChange={(open) => !open && setSharePlayerId(null)}
+          player={{
+            id: sharePlayer.id,
+            name: sharePlayer.name,
+            role: sharePlayer.role,
+            photo_url: sharePlayer.photo_url,
+            stats: sharePlayer.stats,
+          }}
+          teamName={teamSettings?.team_name}
+          teamSettings={teamSettings}
+          scoringSettings={scoringSettings}
+        />
+      )}
     </div>;
 };
 export default Leaderboard;
