@@ -16,6 +16,7 @@ import { SeasonDialog, SeasonFormData } from '@/components/dialogs/SeasonDialog'
 import { TournamentDialog, TournamentFormData } from '@/components/dialogs/TournamentDialog';
 import { SeriesDialog, SeriesFormData } from '@/components/dialogs/SeriesDialog';
 import { DeleteConfirmDialog } from '@/components/dialogs/DeleteConfirmDialog';
+import { DataHealthDashboard } from '@/components/DataHealthDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -1655,20 +1656,19 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="health">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Data Health Dashboard</CardTitle>
-                  <CardDescription>Monitor and fix data quality issues</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p className="font-semibold mb-2">Data Health Monitoring</p>
-                    <p className="text-sm">Full data health analysis coming soon!</p>
-                    <p className="text-xs mt-4">This will detect orphaned records, incomplete matches, and data anomalies.</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <DataHealthDashboard 
+                players={players.map(p => ({ id: p.id, name: p.name }))}
+                matches={matches.map(m => ({ 
+                  id: m.id, 
+                  match_date: m.match_date, 
+                  venue: m.venue,
+                  series_id: m.series_id,
+                  our_score: m.our_score,
+                  opponent_score: m.opponent_score,
+                  result: m.result,
+                }))}
+                series={series.map(s => ({ id: s.id, name: s.name }))}
+              />
             </TabsContent>
           </Tabs>
         </motion.div>
