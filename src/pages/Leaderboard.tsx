@@ -301,13 +301,15 @@ const Leaderboard = () => {
              
             </h1>
             <p className="text-muted-foreground">Complete rankings with points system</p>
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <ExportButton onExportPlayers={handleExportPlayers} disabled={loading || players.length === 0} />
-              {isAdmin && <Button variant="outline" size="sm" onClick={handleRecordPoints} disabled={isRecording}>
+            {isAdmin && (
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <ExportButton onExportPlayers={handleExportPlayers} disabled={loading || players.length === 0} />
+                <Button variant="outline" size="sm" onClick={handleRecordPoints} disabled={isRecording}>
                   {isRecording ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                   Record Today's Points
-                </Button>}
-            </div>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Top 3 Podium */}
