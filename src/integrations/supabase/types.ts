@@ -745,6 +745,45 @@ export type Database = {
         }
         Relationships: []
       }
+      team_settings_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number | null
+          tagline: string | null
+          team_logo_url: string | null
+          team_name: string | null
+          updated_at: string | null
+          watermark_enabled: boolean | null
+          watermark_handle: string | null
+          watermark_position: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number | null
+          tagline?: string | null
+          team_logo_url?: string | null
+          team_name?: string | null
+          updated_at?: string | null
+          watermark_enabled?: boolean | null
+          watermark_handle?: string | null
+          watermark_position?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number | null
+          tagline?: string | null
+          team_logo_url?: string | null
+          team_name?: string | null
+          updated_at?: string | null
+          watermark_enabled?: boolean | null
+          watermark_handle?: string | null
+          watermark_position?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_player_ratings: {
