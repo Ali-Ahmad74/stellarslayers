@@ -1,6 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2.89.0";
 import { z } from "npm:zod@3.25.76";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
+
 const int0 = z.number().int().min(0);
 
 const rowSchema = z.object({
@@ -45,6 +50,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     headers: {
       "content-type": "application/json; charset=utf-8",
+      ...corsHeaders,
       ...(init?.headers ?? {}),
     },
     ...init,
@@ -52,6 +58,11 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, { status: 405 });
   }
@@ -69,6 +80,24 @@ Deno.serve(async (req) => {
     const client = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
+
+    // Get the current user
+    const { data: { user }, error: userError } = await client.auth.getUser();
+    if (userError || !user) {
+      return jsonResponse({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // Verify admin role explicitly
+    const { data: roleData } = await client
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (!roleData) {
+      return jsonResponse({ error: "Admin role required" }, { status: 403 });
+    }
 
     const raw = await req.json();
     const parsed = payloadSchema.safeParse(raw);

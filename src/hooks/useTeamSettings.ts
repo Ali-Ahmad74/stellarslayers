@@ -24,8 +24,9 @@ export function useTeamSettings() {
     setLoading(true);
     setError(null);
 
+    // Use the secure public view that excludes admin_owner_user_id
     const { data, error } = await supabase
-      .from("team_settings")
+      .from("team_settings_public")
       .select("team_name, team_logo_url, description, watermark_enabled, watermark_handle, watermark_position")
       .eq("id", 1)
       .maybeSingle();
