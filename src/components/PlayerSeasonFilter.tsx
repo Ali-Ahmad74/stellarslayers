@@ -4,7 +4,6 @@ interface Season {
   id: number;
   name: string;
   year: number;
-  is_active?: boolean;
 }
 
 interface PlayerSeasonFilterProps {
