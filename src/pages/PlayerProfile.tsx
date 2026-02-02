@@ -61,7 +61,8 @@ const PlayerProfile = () => {
     stats, 
     battingRecords, 
     bowlingRecords, 
-    loading: statsLoading 
+    loading: statsLoading,
+    debugInfo 
   } = usePlayerStatsBySeason(playerId, selectedSeasonId);
   
   const { formData, stats: formStats } = useFormAnalysis(battingRecords, bowlingRecords);
@@ -152,12 +153,27 @@ const PlayerProfile = () => {
       <Header />
       
       <main className="container py-8">
-        {/* Debug: Player ID */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-4 p-2 bg-muted/50 rounded text-xs font-mono text-muted-foreground">
-            Debug: playerId = {playerId} (route param: {id})
-          </div>
-        )}
+        {/* Debug: Player ID and Stats */}
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg text-xs font-mono text-muted-foreground border border-border">
+          <div className="font-semibold mb-2">🔧 Debug Info</div>
+          <div>playerId: <span className="text-primary">{playerId}</span> (route param: {id})</div>
+          <div>Total Records: <span className="text-primary">{debugInfo.totalRecords}</span></div>
+          <div>Selected Season: <span className="text-primary">{selectedSeasonId}</span></div>
+          {debugInfo.lastRecords.length > 0 && (
+            <div className="mt-2">
+              <div className="font-semibold">Last 3 Records:</div>
+              <div className="pl-2 mt-1 space-y-1">
+                {debugInfo.lastRecords.map((record, i) => (
+                  <div key={i} className="text-xs">
+                    match_id: {record.match_id}, player_id: <span className="text-primary">{record.player_id}</span>, 
+                    season_id: <span className={record.season_id ? 'text-primary' : 'text-destructive'}>{record.season_id ?? 'NULL'}</span>, 
+                    date: {record.match_date}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Back Button + Season Filter */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
