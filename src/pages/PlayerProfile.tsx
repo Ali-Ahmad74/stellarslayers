@@ -152,6 +152,13 @@ const PlayerProfile = () => {
       <Header />
       
       <main className="container py-8">
+        {/* Debug: Player ID */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-2 bg-muted/50 rounded text-xs font-mono text-muted-foreground">
+            Debug: playerId = {playerId} (route param: {id})
+          </div>
+        )}
+
         {/* Back Button + Season Filter */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Link to="/">
@@ -161,16 +168,18 @@ const PlayerProfile = () => {
             </Button>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Season:</span>
-              <PlayerSeasonFilter 
-                seasons={seasons}
-                selectedSeasonId={selectedSeasonId}
-                onSeasonChange={setSelectedSeasonId}
-                loading={seasonsLoading}
-              />
-            </div>
+            {seasons.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Season:</span>
+                <PlayerSeasonFilter 
+                  seasons={seasons}
+                  selectedSeasonId={selectedSeasonId}
+                  onSeasonChange={setSelectedSeasonId}
+                  loading={seasonsLoading}
+                />
+              </div>
+            )}
             <Button onClick={() => setShareOpen(true)}>
               Share Player Card
             </Button>
