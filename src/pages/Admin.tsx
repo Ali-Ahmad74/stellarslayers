@@ -147,18 +147,6 @@ const Admin = () => {
     }
   }, [user, loading, navigate]);
 
-  // Lock admin access to only the currently signed-in admin user.
-  useEffect(() => {
-    if (loading || !user || !isAdmin) return;
-    supabase
-      .from('user_roles')
-      .delete()
-      .eq('role', 'admin')
-      .neq('user_id', user.id)
-      .then(() => {
-        // No-op; if there are no other admins, nothing happens.
-      });
-  }, [loading, user, isAdmin]);
 
   useEffect(() => {
     if (!loading && user && !isAdmin) {
