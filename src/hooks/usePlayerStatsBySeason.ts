@@ -2,23 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
 
-export interface DebugRecord {
-  player_id: number;
-  season_id: number | null;
-  match_id: number;
-  match_date: string;
-}
-
 interface UsePlayerStatsBySeasonResult {
   stats: PlayerStatsType | null;
   battingRecords: any[];
   bowlingRecords: any[];
   loading: boolean;
   error: string | null;
-  debugInfo: {
-    totalRecords: number;
-    lastRecords: DebugRecord[];
-  };
 }
 
 export function usePlayerStatsBySeason(
@@ -30,10 +19,6 @@ export function usePlayerStatsBySeason(
   const [bowlingRecords, setBowlingRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{ totalRecords: number; lastRecords: DebugRecord[] }>({
-    totalRecords: 0,
-    lastRecords: [],
-  });
 
   const fetchStats = useCallback(async () => {
     if (!playerId) {
@@ -183,38 +168,6 @@ export function usePlayerStatsBySeason(
 
       setStats(aggregatedStats);
 
-      // Build debug info from all records
-      const allRecords: DebugRecord[] = [
-        ...(battingData || []).map((r: any) => ({
-          player_id: r.player_id,
-          season_id: r.season_id,
-          match_id: r.match_id,
-          match_date: r.matches?.match_date || '',
-        })),
-        ...(bowlingData || []).map((r: any) => ({
-          player_id: r.player_id,
-          season_id: r.season_id,
-          match_id: r.match_id,
-          match_date: r.matches?.match_date || '',
-        })),
-        ...(fieldingData || []).map((r: any) => ({
-          player_id: r.player_id,
-          season_id: r.season_id,
-          match_id: r.match_id,
-          match_date: r.matches?.match_date || '',
-        })),
-      ];
-
-      // Sort by match_date descending and get last 3
-      const sortedRecords = allRecords.sort((a, b) => 
-        new Date(b.match_date).getTime() - new Date(a.match_date).getTime()
-      );
-
-      setDebugInfo({
-        totalRecords: allRecords.length,
-        lastRecords: sortedRecords.slice(0, 3),
-      });
-
       // Set records for form analysis
       setBattingRecords(
         (battingData || []).map((r: any) => ({
@@ -252,6 +205,5 @@ export function usePlayerStatsBySeason(
     bowlingRecords,
     loading,
     error,
-    debugInfo,
   };
 }
