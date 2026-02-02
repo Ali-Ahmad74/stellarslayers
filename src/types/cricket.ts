@@ -29,6 +29,7 @@ export interface PlayerStats {
   no_balls: number;
   fours_conceded: number;
   sixes_conceded: number;
+  dot_balls: number;
   three_fers: number;
   five_fers: number;
   catches: number;
@@ -77,6 +78,7 @@ export interface BowlingInput {
   no_balls: number;
   fours_conceded: number;
   sixes_conceded: number;
+  dot_balls: number;
 }
 
 export interface FieldingInput {

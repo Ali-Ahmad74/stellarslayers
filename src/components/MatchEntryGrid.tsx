@@ -48,6 +48,7 @@ const rowSchema = z.object({
       no_balls: int0,
       fours_conceded: int0,
       sixes_conceded: int0,
+      dot_balls: int0,
     })
     .optional(),
   fielding: z
@@ -82,6 +83,7 @@ type DraftRow = {
     no_balls: string;
     fours_conceded: string;
     sixes_conceded: string;
+    dot_balls: string;
   };
   fielding: { catches: string; runouts: string; stumpings: string; dropped_catches: string };
 };
@@ -99,6 +101,7 @@ function emptyDraftRow(): DraftRow {
       no_balls: "0",
       fours_conceded: "0",
       sixes_conceded: "0",
+      dot_balls: "0",
     },
     fielding: { catches: "0", runouts: "0", stumpings: "0", dropped_catches: "0" },
   };
@@ -189,14 +192,15 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     if (colIdx === 6) return { category: "bowling", field: "runs_conceded" };
     if (colIdx === 7) return { category: "bowling", field: "wickets" };
     if (colIdx === 8) return { category: "bowling", field: "maidens" };
-    if (colIdx === 9) return { category: "bowling", field: "wides" };
-    if (colIdx === 10) return { category: "bowling", field: "no_balls" };
-    if (colIdx === 11) return { category: "bowling", field: "fours_conceded" };
-    if (colIdx === 12) return { category: "bowling", field: "sixes_conceded" };
-    if (colIdx === 13) return { category: "fielding", field: "catches" };
-    if (colIdx === 14) return { category: "fielding", field: "runouts" };
-    if (colIdx === 15) return { category: "fielding", field: "stumpings" };
-    if (colIdx === 16) return { category: "fielding", field: "dropped_catches" };
+    if (colIdx === 9) return { category: "bowling", field: "dot_balls" };
+    if (colIdx === 10) return { category: "bowling", field: "wides" };
+    if (colIdx === 11) return { category: "bowling", field: "no_balls" };
+    if (colIdx === 12) return { category: "bowling", field: "fours_conceded" };
+    if (colIdx === 13) return { category: "bowling", field: "sixes_conceded" };
+    if (colIdx === 14) return { category: "fielding", field: "catches" };
+    if (colIdx === 15) return { category: "fielding", field: "runouts" };
+    if (colIdx === 16) return { category: "fielding", field: "stumpings" };
+    if (colIdx === 17) return { category: "fielding", field: "dropped_catches" };
     return null;
   };
 
@@ -1087,6 +1091,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                 <div>Runs conc</div>
                 <div>Wkts</div>
                 <div>Maidens</div>
+                <div>Dots</div>
                 <div>Wides</div>
                 <div>No-balls</div>
                 <div>4s conc</div>
@@ -1161,6 +1166,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       "runs_conceded",
                       "wickets",
                       "maidens",
+                      "dot_balls",
                       "wides",
                       "no_balls",
                       "fours_conceded",
@@ -1172,10 +1178,10 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       inputMode="numeric"
                       value={(r.bowling as any)[key]}
                       ref={(el) => {
-                        inputRefs.current[`${p.id}:${4 + i}`] = el;
+                        inputRefs.current[`${p.id}:${5 + i}`] = el;
                       }}
-                      onFocus={() => focusCell(p.id, 4 + i)}
-                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 4 + i)}
+                      onFocus={() => focusCell(p.id, 5 + i)}
+                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 5 + i)}
                       onChange={(e) =>
                         setRows((prev) => ({
                           ...prev,
@@ -1197,10 +1203,10 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       inputMode="numeric"
                       value={(r.fielding as any)[key]}
                       ref={(el) => {
-                        inputRefs.current[`${p.id}:${12 + i}`] = el;
+                        inputRefs.current[`${p.id}:${14 + i}`] = el;
                       }}
-                      onFocus={() => focusCell(p.id, 12 + i)}
-                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 12 + i)}
+                      onFocus={() => focusCell(p.id, 14 + i)}
+                      onKeyDown={(e) => handleCellKeyDown(e, playerIndex, 14 + i)}
                       onChange={(e) =>
                         setRows((prev) => ({
                           ...prev,

@@ -29,6 +29,7 @@ const rowSchema = z.object({
       no_balls: int0,
       fours_conceded: int0,
       sixes_conceded: int0,
+      dot_balls: int0,
     })
     .optional(),
   fielding: z
@@ -174,6 +175,7 @@ Deno.serve(async (req) => {
               no_balls: row.bowling.no_balls,
               fours_conceded: row.bowling.fours_conceded,
               sixes_conceded: row.bowling.sixes_conceded,
+              dot_balls: row.bowling.dot_balls,
             })
             .eq("id", existingId);
           if (res.error) errors.push(`bowling p${row.player_id}: ${res.error.message}`);
@@ -189,6 +191,7 @@ Deno.serve(async (req) => {
             no_balls: row.bowling.no_balls,
             fours_conceded: row.bowling.fours_conceded,
             sixes_conceded: row.bowling.sixes_conceded,
+            dot_balls: row.bowling.dot_balls,
           });
           if (res.error) errors.push(`bowling p${row.player_id}: ${res.error.message}`);
         }

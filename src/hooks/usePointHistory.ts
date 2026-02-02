@@ -129,6 +129,7 @@ export function usePointHistory() {
             no_balls: Number(playerStats.no_balls) || 0,
             fours_conceded: Number((playerStats as any).fours_conceded) || 0,
             sixes_conceded: Number((playerStats as any).sixes_conceded) || 0,
+            dot_balls: Number((playerStats as any).dot_balls) || 0,
             three_fers: Number((playerStats as any).three_fers) || 0,
             five_fers: Number((playerStats as any).five_fers) || 0,
             catches: Number(playerStats.catches) || 0,

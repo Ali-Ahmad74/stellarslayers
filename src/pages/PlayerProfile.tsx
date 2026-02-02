@@ -80,6 +80,7 @@ const PlayerProfile = () => {
         no_balls: Number(statsData.no_balls) || 0,
         fours_conceded: Number((statsData as any).fours_conceded) || 0,
         sixes_conceded: Number((statsData as any).sixes_conceded) || 0,
+        dot_balls: Number((statsData as any).dot_balls) || 0,
         three_fers: Number((statsData as any).three_fers) || 0,
         five_fers: Number((statsData as any).five_fers) || 0,
         catches: Number(statsData.catches) || 0,
@@ -267,6 +268,10 @@ const PlayerProfile = () => {
                     <p className="text-sm text-muted-foreground">Runs</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-xl">
+                    <p className="text-3xl font-bold font-display text-primary">{stats?.total_balls || 0}</p>
+                    <p className="text-sm text-muted-foreground">Balls Faced</p>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-xl">
                     <p className="text-3xl font-bold font-display text-primary">{strikeRate}</p>
                     <p className="text-sm text-muted-foreground">Strike Rate</p>
                   </div>
@@ -352,7 +357,11 @@ const PlayerProfile = () => {
                 {/* Bowling extras */}
                 <div className="mt-4 pt-4 border-t">
                   <h4 className="text-sm font-semibold text-muted-foreground mb-3">Additional Stats</h4>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-5 gap-3">
+                    <div className="text-center p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{stats?.dot_balls || 0}</p>
+                      <p className="text-xs text-muted-foreground">Dot Balls</p>
+                    </div>
                     <div className="text-center p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
                       <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats?.three_fers || 0}</p>
                       <p className="text-xs text-muted-foreground">3-fers</p>

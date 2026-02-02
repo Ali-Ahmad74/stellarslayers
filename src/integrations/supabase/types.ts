@@ -113,6 +113,7 @@ export type Database = {
         Row: {
           balls: number
           created_at: string
+          dot_balls: number
           fours_conceded: number
           id: number
           maidens: number
@@ -128,6 +129,7 @@ export type Database = {
         Insert: {
           balls?: number
           created_at?: string
+          dot_balls?: number
           fours_conceded?: number
           id?: number
           maidens?: number
@@ -143,6 +145,7 @@ export type Database = {
         Update: {
           balls?: number
           created_at?: string
+          dot_balls?: number
           fours_conceded?: number
           id?: number
           maidens?: number
@@ -668,6 +671,7 @@ export type Database = {
         Row: {
           bowling_balls: number | null
           catches: number | null
+          dot_balls: number | null
           dropped_catches: number | null
           fifties: number | null
           five_fers: number | null
@@ -690,58 +694,6 @@ export type Database = {
           total_runs: number | null
           wickets: number | null
           wides: number | null
-        }
-        Insert: {
-          bowling_balls?: never
-          catches?: never
-          dropped_catches?: never
-          fifties?: never
-          five_fers?: never
-          fours?: never
-          fours_conceded?: never
-          hundreds?: never
-          maidens?: never
-          matches?: never
-          no_balls?: never
-          player_id?: number | null
-          runouts?: never
-          runs_conceded?: never
-          sixes?: never
-          sixes_conceded?: never
-          stumpings?: never
-          thirties?: never
-          three_fers?: never
-          times_out?: never
-          total_balls?: never
-          total_runs?: never
-          wickets?: never
-          wides?: never
-        }
-        Update: {
-          bowling_balls?: never
-          catches?: never
-          dropped_catches?: never
-          fifties?: never
-          five_fers?: never
-          fours?: never
-          fours_conceded?: never
-          hundreds?: never
-          maidens?: never
-          matches?: never
-          no_balls?: never
-          player_id?: number | null
-          runouts?: never
-          runs_conceded?: never
-          sixes?: never
-          sixes_conceded?: never
-          stumpings?: never
-          thirties?: never
-          three_fers?: never
-          times_out?: never
-          total_balls?: never
-          total_runs?: never
-          wickets?: never
-          wides?: never
         }
         Relationships: []
       }
