@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
 
-interface UsePlayerStatsByYearResult {
+interface UsePlayerStatsBySeasonResult {
   stats: PlayerStatsType | null;
   battingRecords: any[];
   bowlingRecords: any[];
@@ -10,10 +10,10 @@ interface UsePlayerStatsByYearResult {
   error: string | null;
 }
 
-export function usePlayerStatsByYear(
+export function usePlayerStatsBySeason(
   playerId: number | null,
-  selectedYear: string
-): UsePlayerStatsByYearResult {
+  selectedSeasonId: string
+): UsePlayerStatsBySeasonResult {
   const [stats, setStats] = useState<PlayerStatsType | null>(null);
   const [battingRecords, setBattingRecords] = useState<any[]>([]);
   const [bowlingRecords, setBowlingRecords] = useState<any[]>([]);
@@ -30,7 +30,7 @@ export function usePlayerStatsByYear(
     setError(null);
 
     try {
-      // Build queries with optional year filter
+      // Build queries with optional season filter
       let battingQuery = supabase
         .from('batting_inputs')
         .select('*, matches!inner(match_date)')
@@ -46,22 +46,12 @@ export function usePlayerStatsByYear(
         .select('*, matches!inner(match_date)')
         .eq('player_id', playerId);
 
-      // Apply year filter if not 'all'
-      if (selectedYear !== 'all') {
-        const startDate = `${selectedYear}-01-01`;
-        const endDate = `${selectedYear}-12-31`;
-        
-        battingQuery = battingQuery
-          .gte('matches.match_date', startDate)
-          .lte('matches.match_date', endDate);
-        
-        bowlingQuery = bowlingQuery
-          .gte('matches.match_date', startDate)
-          .lte('matches.match_date', endDate);
-        
-        fieldingQuery = fieldingQuery
-          .gte('matches.match_date', startDate)
-          .lte('matches.match_date', endDate);
+      // Apply season filter if not 'all'
+      if (selectedSeasonId !== 'all') {
+        const seasonId = parseInt(selectedSeasonId);
+        battingQuery = battingQuery.eq('season_id', seasonId);
+        bowlingQuery = bowlingQuery.eq('season_id', seasonId);
+        fieldingQuery = fieldingQuery.eq('season_id', seasonId);
       }
 
       const [
@@ -87,7 +77,6 @@ export function usePlayerStatsByYear(
       let thirties = 0;
       let fifties = 0;
       let hundreds = 0;
-      const battingMatchIds = new Set<number>();
 
       for (const input of battingData || []) {
         totalRuns += input.runs || 0;
@@ -100,8 +89,6 @@ export function usePlayerStatsByYear(
         if (runs >= 100) hundreds += 1;
         else if (runs >= 50) fifties += 1;
         else if (runs >= 30) thirties += 1;
-
-        battingMatchIds.add(input.match_id);
       }
 
       // Aggregate bowling stats
@@ -146,7 +133,7 @@ export function usePlayerStatsByYear(
         droppedCatches += input.dropped_catches || 0;
       }
 
-      // Count unique matches (combine all inputs)
+      // Count unique matches
       const allMatchIds = new Set<number>();
       (battingData || []).forEach(i => allMatchIds.add(i.match_id));
       (bowlingData || []).forEach(i => allMatchIds.add(i.match_id));
@@ -206,7 +193,7 @@ export function usePlayerStatsByYear(
     } finally {
       setLoading(false);
     }
-  }, [playerId, selectedYear]);
+  }, [playerId, selectedSeasonId]);
 
   useEffect(() => {
     fetchStats();
