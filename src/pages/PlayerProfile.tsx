@@ -9,10 +9,11 @@ import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { RoleBadge } from '@/components/RoleBadge';
 import { PlayerAchievements } from '@/components/PlayerAchievements';
 import { FormAnalysisChart } from '@/components/FormAnalysisChart';
-import { YearFilter } from '@/components/YearFilter';
+import { PlayerSeasonFilter } from '@/components/PlayerSeasonFilter';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateICCPoints, PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
-import { usePlayerStatsByYear } from '@/hooks/usePlayerStatsByYear';
+import { usePlayerSeasons } from '@/hooks/usePlayerSeasons';
+import { usePlayerStatsBySeason } from '@/hooks/usePlayerStatsBySeason';
 import { useFormAnalysis } from '@/hooks/useFormAnalysis';
 import type { PlayerRole } from '@/types/cricket';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
@@ -32,20 +33,36 @@ const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerLoading, setPlayerLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
+  const [seasonInitialized, setSeasonInitialized] = useState(false);
   const { settings: scoringSettings } = useScoringSettings();
   const { teamSettings } = useTeamSettings();
   const [shareOpen, setShareOpen] = useState(false);
 
   const playerId = id ? Number(id) : null;
   
-  // Fetch stats filtered by year
+  // Fetch available seasons for this player
+  const { 
+    seasons, 
+    loading: seasonsLoading, 
+    latestSeasonId 
+  } = usePlayerSeasons(playerId);
+
+  // Set default season to latest when loaded
+  useEffect(() => {
+    if (!seasonsLoading && !seasonInitialized && latestSeasonId) {
+      setSelectedSeasonId(latestSeasonId);
+      setSeasonInitialized(true);
+    }
+  }, [seasonsLoading, latestSeasonId, seasonInitialized]);
+
+  // Fetch stats filtered by season
   const { 
     stats, 
     battingRecords, 
     bowlingRecords, 
     loading: statsLoading 
-  } = usePlayerStatsByYear(playerId, selectedYear);
+  } = usePlayerStatsBySeason(playerId, selectedSeasonId);
   
   const { formData, stats: formStats } = useFormAnalysis(battingRecords, bowlingRecords);
 
@@ -72,7 +89,12 @@ const PlayerProfile = () => {
     fetchPlayer();
   }, [id]);
 
-  const loading = playerLoading || statsLoading;
+  const loading = playerLoading || seasonsLoading;
+
+  // Get selected season name for display
+  const selectedSeasonName = selectedSeasonId === 'all' 
+    ? 'All Seasons' 
+    : seasons.find(s => String(s.id) === selectedSeasonId)?.name || '';
 
   if (loading && playerLoading) {
     return (
@@ -130,7 +152,7 @@ const PlayerProfile = () => {
       <Header />
       
       <main className="container py-8">
-        {/* Back Button + Year Filter */}
+        {/* Back Button + Season Filter */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Link to="/">
             <Button variant="outline" className="gap-2">
@@ -141,8 +163,13 @@ const PlayerProfile = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Year:</span>
-              <YearFilter selectedYear={selectedYear} onYearChange={setSelectedYear} />
+              <span className="text-sm text-muted-foreground">Season:</span>
+              <PlayerSeasonFilter 
+                seasons={seasons}
+                selectedSeasonId={selectedSeasonId}
+                onSeasonChange={setSelectedSeasonId}
+                loading={seasonsLoading}
+              />
             </div>
             <Button onClick={() => setShareOpen(true)}>
               Share Player Card
@@ -172,7 +199,7 @@ const PlayerProfile = () => {
                 )}
               </div>
               <p className="text-white/70">
-                {stats?.matches || 0} Matches {selectedYear !== 'all' ? `in ${selectedYear}` : 'Played'}
+                {stats?.matches || 0} Matches {selectedSeasonId !== 'all' ? `in ${selectedSeasonName}` : 'Played'}
               </p>
             </div>
           </div>
@@ -217,8 +244,8 @@ const PlayerProfile = () => {
             <div className="text-6xl mb-4">📊</div>
             <h3 className="text-xl font-semibold mb-2">No Stats Available</h3>
             <p className="text-muted-foreground">
-              {selectedYear !== 'all' 
-                ? `No performance records found for ${selectedYear}. Try selecting a different year.`
+              {selectedSeasonId !== 'all' 
+                ? `No performance records found for ${selectedSeasonName}. Try selecting a different season.`
                 : 'No performance records found for this player yet.'}
             </p>
           </motion.div>
@@ -238,9 +265,9 @@ const PlayerProfile = () => {
                   <CardTitle className="flex items-center gap-2">
                     <span className="text-2xl">🏏</span>
                     Batting Statistics
-                    {selectedYear !== 'all' && (
+                    {selectedSeasonId !== 'all' && (
                       <span className="ml-auto text-sm font-normal bg-white/20 px-2 py-1 rounded">
-                        {selectedYear}
+                        {selectedSeasonName}
                       </span>
                     )}
                   </CardTitle>
@@ -309,9 +336,9 @@ const PlayerProfile = () => {
                   <CardTitle className="flex items-center gap-2">
                     <span className="text-2xl">🎯</span>
                     Bowling Statistics
-                    {selectedYear !== 'all' && (
+                    {selectedSeasonId !== 'all' && (
                       <span className="ml-auto text-sm font-normal bg-white/20 px-2 py-1 rounded">
-                        {selectedYear}
+                        {selectedSeasonName}
                       </span>
                     )}
                   </CardTitle>
@@ -385,9 +412,9 @@ const PlayerProfile = () => {
                   <CardTitle className="flex items-center gap-2">
                     <span className="text-2xl">🧤</span>
                     Fielding Statistics
-                    {selectedYear !== 'all' && (
+                    {selectedSeasonId !== 'all' && (
                       <span className="ml-auto text-sm font-normal bg-white/20 px-2 py-1 rounded">
-                        {selectedYear}
+                        {selectedSeasonName}
                       </span>
                     )}
                   </CardTitle>
