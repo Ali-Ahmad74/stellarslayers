@@ -301,46 +301,50 @@ const MatchHistory = () => {
         </motion.div>
 
         <Tabs defaultValue="matches" className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <TabsList>
-              <TabsTrigger value="matches">Match History</TabsTrigger>
-              <TabsTrigger value="head-to-head">Head-to-Head</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex items-center gap-3">
-              <SeasonFilter 
-                years={years} 
-                selectedYear={selectedYear} 
-                onYearChange={setSelectedYear} 
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportMatches}
-                className="gap-2"
-                disabled={filteredMatches.length === 0}
-              >
-                <Download className="w-4 h-4" />
-                Summary PDF
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleExportDetailedMatches}
-                className="gap-2"
-                disabled={filteredMatches.length === 0}
-              >
-                <Download className="w-4 h-4" />
-                Full Details PDF
-              </Button>
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Row 1: Tabs + Season Filter + Export Buttons */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <TabsList>
+                <TabsTrigger value="matches">Match History</TabsTrigger>
+                <TabsTrigger value="head-to-head">Head-to-Head</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                <SeasonFilter 
+                  years={years} 
+                  selectedYear={selectedYear} 
+                  onYearChange={setSelectedYear} 
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportMatches}
+                  className="gap-2"
+                  disabled={filteredMatches.length === 0}
+                >
+                  <Download className="w-4 h-4" />
+                  Summary PDF
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleExportDetailedMatches}
+                  className="gap-2"
+                  disabled={filteredMatches.length === 0}
+                >
+                  <Download className="w-4 h-4" />
+                  Full Details PDF
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+          {/* Row 2: Tournament & Series Filters */}
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Tournament</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Tournament</span>
               <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
-                <SelectTrigger className="w-[240px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All tournaments" />
                 </SelectTrigger>
                 <SelectContent>
@@ -353,11 +357,16 @@ const MatchHistory = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {selectedTournamentId !== 'all' && (
+                <Button variant="ghost" size="icon" onClick={() => setSelectedTournamentId('all')}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Series</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Series</span>
               <Select value={selectedSeriesId} onValueChange={setSelectedSeriesId}>
-                <SelectTrigger className="w-[240px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All series" />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,19 +379,12 @@ const MatchHistory = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {selectedSeriesId !== 'all' && (
+                <Button variant="ghost" size="icon" onClick={() => setSelectedSeriesId('all')}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
-            {selectedTournamentId !== 'all' && (
-              <Button variant="outline" size="sm" onClick={() => setSelectedTournamentId('all')}>
-                <X className="w-4 h-4 mr-2" />
-                Clear
-              </Button>
-            )}
-            {selectedSeriesId !== 'all' && (
-              <Button variant="outline" size="sm" onClick={() => setSelectedSeriesId('all')}>
-                <X className="w-4 h-4 mr-2" />
-                Clear
-              </Button>
-            )}
           </div>
 
           <TabsContent value="matches" className="space-y-6">
