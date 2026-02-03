@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SiteFooter } from '@/components/SiteFooter';
 import { MatchScorecard } from '@/components/MatchScorecard';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   exportMatches, 
   exportDetailedMatches,
@@ -95,6 +96,7 @@ const MatchHistory = () => {
   const [selectedSeriesId, setSelectedSeriesId] = useState<string>('all');
   
   const { teamSettings } = useTeamSettings();
+  const { isAdmin } = useAuth();
 
   // Get unique years from matches
   const years = useMemo(() => {
@@ -315,26 +317,30 @@ const MatchHistory = () => {
                   selectedYear={selectedYear} 
                   onYearChange={setSelectedYear} 
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportMatches}
-                  className="gap-2"
-                  disabled={filteredMatches.length === 0}
-                >
-                  <Download className="w-4 h-4" />
-                  Summary PDF
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleExportDetailedMatches}
-                  className="gap-2"
-                  disabled={filteredMatches.length === 0}
-                >
-                  <Download className="w-4 h-4" />
-                  Full Details PDF
-                </Button>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportMatches}
+                      className="gap-2"
+                      disabled={filteredMatches.length === 0}
+                    >
+                      <Download className="w-4 h-4" />
+                      Summary PDF
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleExportDetailedMatches}
+                      className="gap-2"
+                      disabled={filteredMatches.length === 0}
+                    >
+                      <Download className="w-4 h-4" />
+                      Full Details PDF
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
