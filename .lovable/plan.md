@@ -257,12 +257,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE ball_by_ball;
 
 ---
 
-## Next Steps
+## Implementation Status
 
-Approve karne par, main:
-1. Database tables create karunga
-2. Live scoring page banaunga
-3. Realtime sync implement karunga
-4. Stats finalization edge function likhonga
-5. Testing karunga end-to-end
+| Step | Status |
+|------|--------|
+| ✅ Database tables + RLS | Completed |
+| ✅ Live scoring UI | Completed |
+| ✅ Realtime sync | Completed |
+| ✅ Stats finalization edge function | Completed |
+| ✅ Routes added to App.tsx | Completed |
+| ✅ Live scoring button in Admin | Completed |
+| ⏳ Testing end-to-end | Pending |
+
+### Routes Added
+- `/scorer/:id` - Admin-only live scoring interface
+- `/live/:id` - Public spectator view with realtime updates
+
+### Edge Function
+- `finalize-match` - Aggregates ball_by_ball data into batting/bowling/fielding_inputs tables
 
