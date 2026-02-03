@@ -36,26 +36,90 @@ export interface MatchExportData {
   series: string;
 }
 
-export function exportPlayerStats(players: PlayerExportData[], teamName?: string) {
-  const doc = new jsPDF({ orientation: "landscape" });
-  
+export interface ExportOptions {
+  teamName?: string;
+  logoUrl?: string | null;
+}
+
+/**
+ * Load an image and convert to base64 for PDF embedding
+ */
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Add header with optional logo to the PDF
+ */
+async function addHeader(
+  doc: jsPDF,
+  title: string,
+  options: ExportOptions,
+  isLandscape: boolean = false
+): Promise<number> {
+  const pageWidth = isLandscape ? 297 : 210;
+  let yPosition = 15;
+  let textStartX = 14;
+
+  // Add logo if available
+  if (options.logoUrl) {
+    const logoBase64 = await loadImageAsBase64(options.logoUrl);
+    if (logoBase64) {
+      try {
+        const logoSize = 18;
+        doc.addImage(logoBase64, "PNG", 14, 10, logoSize, logoSize);
+        textStartX = 14 + logoSize + 6; // Logo width + padding
+      } catch {
+        // If logo fails, continue without it
+      }
+    }
+  }
+
   // Title
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(teamName ? `${teamName} - Player Statistics` : "Player Statistics", 14, 20);
-  
-  // Date
-  doc.setFontSize(10);
+  doc.text(title, textStartX, yPosition + 5);
+
+  // Team name subtitle if different from title
+  if (options.teamName && !title.includes(options.teamName)) {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(options.teamName, textStartX, yPosition + 12);
+    yPosition += 5;
+  }
+
+  // Date - right aligned
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 14, yPosition + 5, { align: "right" });
+
+  return options.logoUrl ? 35 : 28;
+}
+
+export async function exportPlayerStats(players: PlayerExportData[], options: ExportOptions = {}) {
+  const doc = new jsPDF({ orientation: "landscape" });
+  
+  const title = options.teamName ? `${options.teamName} - Player Statistics` : "Player Statistics";
+  const headerHeight = await addHeader(doc, title, options, true);
 
   // Batting table
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Batting Statistics", 14, 38);
+  doc.text("Batting Statistics", 14, headerHeight + 5);
 
   autoTable(doc, {
-    startY: 42,
+    startY: headerHeight + 9,
     head: [["Name", "Role", "Matches", "Runs", "Balls", "4s", "6s", "Avg", "SR"]],
     body: players.map((p) => [
       p.name,
@@ -108,18 +172,11 @@ export function exportPlayerStats(players: PlayerExportData[], teamName?: string
   doc.save(`player-stats-${new Date().toISOString().split("T")[0]}.pdf`);
 }
 
-export function exportMatches(matches: MatchExportData[], teamName?: string) {
+export async function exportMatches(matches: MatchExportData[], options: ExportOptions = {}) {
   const doc = new jsPDF();
   
-  // Title
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text(teamName ? `${teamName} - Match History` : "Match History", 14, 20);
-  
-  // Date
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+  const title = options.teamName ? `${options.teamName} - Match History` : "Match History";
+  const headerHeight = await addHeader(doc, title, options, false);
 
   // Summary
   const won = matches.filter((m) => m.result === "Won").length;
@@ -127,11 +184,11 @@ export function exportMatches(matches: MatchExportData[], teamName?: string) {
   const other = matches.length - won - lost;
   
   doc.setFontSize(11);
-  doc.text(`Total Matches: ${matches.length}  |  Won: ${won}  |  Lost: ${lost}  |  Other: ${other}`, 14, 36);
+  doc.text(`Total Matches: ${matches.length}  |  Won: ${won}  |  Lost: ${lost}  |  Other: ${other}`, 14, headerHeight + 6);
 
   // Table
   autoTable(doc, {
-    startY: 44,
+    startY: headerHeight + 12,
     head: [["Date", "Opponent", "Venue", "Score", "Opp Score", "Result", "Overs", "Series"]],
     body: matches.map((m) => [
       m.date,
