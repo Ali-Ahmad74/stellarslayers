@@ -59,6 +59,7 @@ interface Match {
   result: string | null;
   tournament_id: number | null;
   series_id?: number | null;
+  player_of_the_match_id?: number | null;
   created_at: string;
 }
 
@@ -287,6 +288,7 @@ const Admin = () => {
           our_score: data.our_score,
           opponent_score: data.opponent_score,
           result: data.result,
+          player_of_the_match_id: data.player_of_the_match_id,
         })
         .eq('id', data.id);
       
@@ -310,6 +312,7 @@ const Admin = () => {
           our_score: data.our_score,
           opponent_score: data.opponent_score,
           result: data.result,
+          player_of_the_match_id: data.player_of_the_match_id,
         });
       
       if (error) {
@@ -1678,6 +1681,7 @@ const Admin = () => {
         match={editingMatch}
         tournaments={tournaments.map(t => ({ id: t.id, name: t.name }))}
         seriesOptions={series.map(s => ({ id: s.id, name: s.name }))}
+        players={players.map(p => ({ id: p.id, name: p.name }))}
         isLoading={saving}
       />
 

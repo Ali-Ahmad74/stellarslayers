@@ -10,6 +10,7 @@ import { RoleBadge } from '@/components/RoleBadge';
 import { PlayerAchievements } from '@/components/PlayerAchievements';
 import { FormAnalysisChart } from '@/components/FormAnalysisChart';
 import { PlayerSeasonFilter } from '@/components/PlayerSeasonFilter';
+import { OpponentBreakdown } from '@/components/OpponentBreakdown';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateICCPoints, PlayerStats as PlayerStatsType } from '@/hooks/usePlayerRankings';
 import { usePlayerSeasons } from '@/hooks/usePlayerSeasons';
@@ -458,6 +459,16 @@ const PlayerProfile = () => {
               transition={{ delay: 0.6 }}
             >
               <FormAnalysisChart data={formData} stats={formStats} type="batting" />
+            </motion.div>
+
+            {/* Opponent Breakdown - full width */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="lg:col-span-2"
+            >
+              <OpponentBreakdown playerId={playerId!} />
             </motion.div>
           </div>
         )}

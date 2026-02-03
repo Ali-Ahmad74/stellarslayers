@@ -287,6 +287,7 @@ export type Database = {
           opponent_score: number | null
           our_score: number | null
           overs: number
+          player_of_the_match_id: number | null
           result: string | null
           series_id: number | null
           tournament_id: number | null
@@ -300,6 +301,7 @@ export type Database = {
           opponent_score?: number | null
           our_score?: number | null
           overs?: number
+          player_of_the_match_id?: number | null
           result?: string | null
           series_id?: number | null
           tournament_id?: number | null
@@ -313,12 +315,27 @@ export type Database = {
           opponent_score?: number | null
           our_score?: number | null
           overs?: number
+          player_of_the_match_id?: number | null
           result?: string | null
           series_id?: number | null
           tournament_id?: number | null
           venue?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "matches_player_of_the_match_id_fkey"
+            columns: ["player_of_the_match_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "matches_player_of_the_match_id_fkey"
+            columns: ["player_of_the_match_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "matches_series_id_fkey"
             columns: ["series_id"]
@@ -499,6 +516,61 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      season_awards: {
+        Row: {
+          award_type: string
+          created_at: string
+          id: string
+          player_id: number
+          points: number
+          season_id: number
+          stats: Json
+          updated_at: string
+        }
+        Insert: {
+          award_type: string
+          created_at?: string
+          id?: string
+          player_id: number
+          points?: number
+          season_id: number
+          stats?: Json
+          updated_at?: string
+        }
+        Update: {
+          award_type?: string
+          created_at?: string
+          id?: string
+          player_id?: number
+          points?: number
+          season_id?: number
+          stats?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_awards_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_stats"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "season_awards_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_awards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seasons: {
         Row: {

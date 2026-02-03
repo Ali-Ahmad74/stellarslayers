@@ -4,6 +4,8 @@ import { Header } from '@/components/Header';
 import { TopPerformers } from '@/components/TopPerformers';
 import { RankingsTable } from '@/components/RankingsTable';
 import { RankingFilters } from '@/components/RankingFilters';
+import { HallOfFame } from '@/components/HallOfFame';
+import { SeasonAwardsDisplay } from '@/components/SeasonAwardsDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
 import { Loader2, Trophy, Target, Shield, Crown } from 'lucide-react';
@@ -100,6 +102,21 @@ const Index = () => {
                 <TopPerformers title="Top Bowlers" icon="🎯" players={topBowling} statKey="wickets" statLabel="Wickets" gradient="from-red-500 to-rose-600" />
                 <TopPerformers title="Top Fielders" icon="🧤" players={topFielding} statKey="catches" statLabel="Catches" gradient="from-blue-500 to-indigo-600" />
               </div>
+            </motion.section>
+
+            {/* Hall of Fame & Season Awards */}
+            <motion.section initial={{
+          opacity: 0,
+          y: 20
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.5,
+          delay: 0.15
+        }} className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <HallOfFame />
+              <SeasonAwardsDisplay compact />
             </motion.section>
 
             {/* Rankings Tables */}
