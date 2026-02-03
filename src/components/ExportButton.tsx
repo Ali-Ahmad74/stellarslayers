@@ -27,7 +27,7 @@ export function ExportButton({ onExportPlayers, onExportMatches, disabled }: Exp
         className="gap-2"
       >
         <Download className="w-4 h-4" />
-        Export CSV
+        Export PDF
       </Button>
     );
   }
@@ -42,10 +42,10 @@ export function ExportButton({ onExportPlayers, onExportMatches, disabled }: Exp
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onExportPlayers}>
-          Player Stats (CSV)
+          Player Stats (PDF)
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onExportMatches}>
-          Match Data (CSV)
+          Match Data (PDF)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
