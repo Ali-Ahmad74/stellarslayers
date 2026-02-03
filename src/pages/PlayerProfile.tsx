@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2, Calendar } from 'lucide-react';
+import { ArrowLeft, Loader2, Calendar, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import type { PlayerRole } from '@/types/cricket';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { exportPlayerFullStats } from '@/lib/pdf-export';
 
 interface Player {
   id: number;
@@ -38,6 +40,7 @@ const PlayerProfile = () => {
   const [seasonInitialized, setSeasonInitialized] = useState(false);
   const { settings: scoringSettings } = useScoringSettings();
   const { teamSettings } = useTeamSettings();
+  const { isAdmin } = useAuth();
   const [shareOpen, setShareOpen] = useState(false);
 
   const playerId = id ? Number(id) : null;
@@ -148,6 +151,63 @@ const PlayerProfile = () => {
     stats.catches > 0
   );
 
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    if (!player || !stats) return;
+
+    await exportPlayerFullStats(
+      {
+        name: player.name,
+        role: player.role,
+        batting_style: player.batting_style,
+        bowling_style: player.bowling_style,
+        matches: stats.matches || 0,
+        // Batting
+        total_runs: stats.total_runs || 0,
+        total_balls: stats.total_balls || 0,
+        fours: stats.fours || 0,
+        sixes: stats.sixes || 0,
+        times_out: stats.times_out || 0,
+        thirties: stats.thirties || 0,
+        fifties: stats.fifties || 0,
+        hundreds: stats.hundreds || 0,
+        battingAverage,
+        strikeRate,
+        // Bowling
+        wickets: stats.wickets || 0,
+        runs_conceded: stats.runs_conceded || 0,
+        bowling_balls: stats.bowling_balls || 0,
+        maidens: stats.maidens || 0,
+        wides: stats.wides || 0,
+        no_balls: stats.no_balls || 0,
+        dot_balls: stats.dot_balls || 0,
+        fours_conceded: stats.fours_conceded || 0,
+        sixes_conceded: stats.sixes_conceded || 0,
+        three_fers: stats.three_fers || 0,
+        five_fers: stats.five_fers || 0,
+        economy,
+        bowlingAverage,
+        // Fielding
+        catches: stats.catches || 0,
+        runouts: stats.runouts || 0,
+        stumpings: stats.stumpings || 0,
+        dropped_catches: stats.dropped_catches || 0,
+        // Points
+        battingPoints: iccPoints.battingPoints,
+        bowlingPoints: iccPoints.bowlingPoints,
+        fieldingPoints: iccPoints.fieldingPoints,
+        totalPoints: iccPoints.totalPoints,
+        // Season
+        seasonName: selectedSeasonName,
+      },
+      {
+        teamName: teamSettings?.team_name,
+        logoUrl: teamSettings?.team_logo_url,
+        watermarkHandle: teamSettings?.watermark_handle,
+      }
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -175,6 +235,17 @@ const PlayerProfile = () => {
             <Button onClick={() => setShareOpen(true)} className="whitespace-nowrap">
               Share Player Card
             </Button>
+            {isAdmin && (
+              <Button 
+                onClick={handleExportPDF} 
+                variant="outline" 
+                className="whitespace-nowrap gap-2"
+                disabled={!hasStats}
+              >
+                <Download className="w-4 h-4" />
+                Export PDF
+              </Button>
+            )}
           </div>
         </div>
 

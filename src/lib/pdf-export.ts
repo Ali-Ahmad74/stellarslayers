@@ -442,3 +442,199 @@ export async function exportDetailedMatches(matches: DetailedMatchExportData[], 
 
   doc.save(`match-details-${new Date().toISOString().split("T")[0]}.pdf`);
 }
+
+// Player Full Detail Stats interface
+export interface PlayerFullStatsExportData {
+  name: string;
+  role: string;
+  batting_style?: string | null;
+  bowling_style?: string | null;
+  matches: number;
+  // Batting
+  total_runs: number;
+  total_balls: number;
+  fours: number;
+  sixes: number;
+  times_out: number;
+  thirties: number;
+  fifties: number;
+  hundreds: number;
+  battingAverage: string;
+  strikeRate: string;
+  // Bowling
+  wickets: number;
+  runs_conceded: number;
+  bowling_balls: number;
+  maidens: number;
+  wides: number;
+  no_balls: number;
+  dot_balls: number;
+  fours_conceded: number;
+  sixes_conceded: number;
+  three_fers: number;
+  five_fers: number;
+  economy: string;
+  bowlingAverage: string;
+  // Fielding
+  catches: number;
+  runouts: number;
+  stumpings: number;
+  dropped_catches: number;
+  // Points
+  battingPoints: number;
+  bowlingPoints: number;
+  fieldingPoints: number;
+  totalPoints: number;
+  // Season info
+  seasonName?: string;
+}
+
+/**
+ * Export a single player's full detailed statistics to PDF
+ */
+export async function exportPlayerFullStats(
+  player: PlayerFullStatsExportData,
+  options: ExportOptions = {}
+) {
+  const doc = new jsPDF();
+
+  const title = `${player.name} - Player Statistics`;
+  const headerHeight = await addHeader(doc, title, options, false);
+
+  let currentY = headerHeight + 5;
+
+  // Player Info section
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  
+  const infoItems = [
+    `Role: ${player.role}`,
+    player.batting_style ? `Batting: ${player.batting_style}` : null,
+    player.bowling_style ? `Bowling: ${player.bowling_style}` : null,
+    `Matches: ${player.matches}`,
+    player.seasonName ? `Season: ${player.seasonName}` : null,
+  ].filter(Boolean);
+  
+  doc.text(infoItems.join("  |  "), 14, currentY);
+  doc.setTextColor(0, 0, 0);
+  currentY += 10;
+
+  // Points Summary Box
+  doc.setFillColor(41, 128, 185);
+  doc.roundedRect(14, currentY, 182, 22, 3, 3, "F");
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Performance Points", 20, currentY + 7);
+  
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const pointsText = `Batting: ${player.battingPoints}  |  Bowling: ${player.bowlingPoints}  |  Fielding: ${player.fieldingPoints}  |  Total: ${player.totalPoints}`;
+  doc.text(pointsText, 20, currentY + 15);
+  doc.setTextColor(0, 0, 0);
+  currentY += 30;
+
+  // Batting Statistics Table
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("🏏 Batting Statistics", 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [["Runs", "Balls", "4s", "6s", "Avg", "SR", "Outs", "30s", "50s", "100s"]],
+    body: [[
+      player.total_runs,
+      player.total_balls,
+      player.fours,
+      player.sixes,
+      player.battingAverage,
+      player.strikeRate,
+      player.times_out,
+      player.thirties,
+      player.fifties,
+      player.hundreds,
+    ]],
+    theme: "striped",
+    headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 9 },
+    styles: { fontSize: 10, cellPadding: 3, halign: "center" },
+    margin: { left: 14, right: 14 },
+  });
+
+  currentY = (doc as any).lastAutoTable.finalY + 12;
+
+  // Bowling Statistics Table
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("🎯 Bowling Statistics", 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [["Wickets", "Runs", "Overs", "Maidens", "Econ", "Avg", "Dots", "3W", "5W"]],
+    body: [[
+      player.wickets,
+      player.runs_conceded,
+      (player.bowling_balls / 6).toFixed(1),
+      player.maidens,
+      player.economy,
+      player.bowlingAverage,
+      player.dot_balls,
+      player.three_fers,
+      player.five_fers,
+    ]],
+    theme: "striped",
+    headStyles: { fillColor: [239, 68, 68], fontStyle: "bold", fontSize: 9, textColor: [255, 255, 255] },
+    styles: { fontSize: 10, cellPadding: 3, halign: "center" },
+    margin: { left: 14, right: 14 },
+  });
+
+  currentY = (doc as any).lastAutoTable.finalY + 8;
+
+  // Bowling extras
+  autoTable(doc, {
+    startY: currentY,
+    head: [["Wides", "No Balls", "4s Conceded", "6s Conceded"]],
+    body: [[
+      player.wides,
+      player.no_balls,
+      player.fours_conceded,
+      player.sixes_conceded,
+    ]],
+    theme: "grid",
+    headStyles: { fillColor: [251, 146, 60], fontStyle: "bold", fontSize: 9 },
+    styles: { fontSize: 10, cellPadding: 3, halign: "center" },
+    margin: { left: 14, right: 14 },
+  });
+
+  currentY = (doc as any).lastAutoTable.finalY + 12;
+
+  // Fielding Statistics Table
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("🧤 Fielding Statistics", 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [["Catches", "Run Outs", "Stumpings", "Dropped"]],
+    body: [[
+      player.catches,
+      player.runouts,
+      player.stumpings,
+      player.dropped_catches,
+    ]],
+    theme: "striped",
+    headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 9 },
+    styles: { fontSize: 10, cellPadding: 3, halign: "center" },
+    margin: { left: 14, right: 14 },
+  });
+
+  // Add footers
+  addFooters(doc, options, false);
+
+  const safeName = player.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+  doc.save(`${safeName}-stats-${new Date().toISOString().split("T")[0]}.pdf`);
+}
