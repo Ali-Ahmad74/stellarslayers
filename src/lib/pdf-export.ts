@@ -39,6 +39,7 @@ export interface MatchExportData {
 export interface ExportOptions {
   teamName?: string;
   logoUrl?: string | null;
+  watermarkHandle?: string | null;
 }
 
 /**
@@ -79,7 +80,7 @@ async function addHeader(
       try {
         const logoSize = 18;
         doc.addImage(logoBase64, "PNG", 14, 10, logoSize, logoSize);
-        textStartX = 14 + logoSize + 6; // Logo width + padding
+        textStartX = 14 + logoSize + 6;
       } catch {
         // If logo fails, continue without it
       }
@@ -107,9 +108,48 @@ async function addHeader(
   return options.logoUrl ? 35 : 28;
 }
 
+/**
+ * Add footer with page numbers and watermark to all pages
+ */
+function addFooters(doc: jsPDF, options: ExportOptions, isLandscape: boolean = false) {
+  const pageCount = doc.getNumberOfPages();
+  const pageWidth = isLandscape ? 297 : 210;
+  const pageHeight = isLandscape ? 210 : 297;
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+
+    // Footer line
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+
+    // Page number - center
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+
+    // Watermark/Handle - left
+    if (options.watermarkHandle) {
+      doc.setFontSize(8);
+      doc.text(options.watermarkHandle, 14, pageHeight - 10);
+    } else if (options.teamName) {
+      doc.setFontSize(8);
+      doc.text(options.teamName, 14, pageHeight - 10);
+    }
+
+    // Generated with Lovable - right
+    doc.setFontSize(8);
+    doc.text("Generated with Lovable", pageWidth - 14, pageHeight - 10, { align: "right" });
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+  }
+}
+
 export async function exportPlayerStats(players: PlayerExportData[], options: ExportOptions = {}) {
   const doc = new jsPDF({ orientation: "landscape" });
-  
+
   const title = options.teamName ? `${options.teamName} - Player Statistics` : "Player Statistics";
   const headerHeight = await addHeader(doc, title, options, true);
 
@@ -139,11 +179,12 @@ export async function exportPlayerStats(players: PlayerExportData[], options: Ex
       0: { cellWidth: 35 },
       1: { cellWidth: 25 },
     },
+    margin: { bottom: 25 },
   });
 
   // Bowling table on next section
   const finalY = (doc as any).lastAutoTable.finalY || 100;
-  
+
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.text("Bowling & Fielding Statistics", 14, finalY + 12);
@@ -167,14 +208,18 @@ export async function exportPlayerStats(players: PlayerExportData[], options: Ex
     columnStyles: {
       0: { cellWidth: 35 },
     },
+    margin: { bottom: 25 },
   });
+
+  // Add footers to all pages
+  addFooters(doc, options, true);
 
   doc.save(`player-stats-${new Date().toISOString().split("T")[0]}.pdf`);
 }
 
 export async function exportMatches(matches: MatchExportData[], options: ExportOptions = {}) {
   const doc = new jsPDF();
-  
+
   const title = options.teamName ? `${options.teamName} - Match History` : "Match History";
   const headerHeight = await addHeader(doc, title, options, false);
 
@@ -182,7 +227,7 @@ export async function exportMatches(matches: MatchExportData[], options: ExportO
   const won = matches.filter((m) => m.result === "Won").length;
   const lost = matches.filter((m) => m.result === "Lost").length;
   const other = matches.length - won - lost;
-  
+
   doc.setFontSize(11);
   doc.text(`Total Matches: ${matches.length}  |  Won: ${won}  |  Lost: ${lost}  |  Other: ${other}`, 14, headerHeight + 6);
 
@@ -209,7 +254,11 @@ export async function exportMatches(matches: MatchExportData[], options: ExportO
       2: { cellWidth: 30 },
       7: { cellWidth: 30 },
     },
+    margin: { bottom: 25 },
   });
+
+  // Add footers to all pages
+  addFooters(doc, options, false);
 
   doc.save(`matches-${new Date().toISOString().split("T")[0]}.pdf`);
 }

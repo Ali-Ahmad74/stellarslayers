@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Calendar, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Loader2, Calendar, MapPin, ChevronDown, ChevronUp, X, Download } from 'lucide-react';
 import { SeasonFilter } from '@/components/SeasonFilter';
 import { HeadToHead } from '@/components/HeadToHead';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SiteFooter } from '@/components/SiteFooter';
 import { MatchScorecard } from '@/components/MatchScorecard';
+import { useTeamSettings } from '@/hooks/useTeamSettings';
+import { exportMatches, type MatchExportData } from '@/lib/pdf-export';
 import {
   Select,
   SelectContent,
@@ -82,6 +84,8 @@ const MatchHistory = () => {
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('all');
   const [selectedSeriesId, setSelectedSeriesId] = useState<string>('all');
+  
+  const { teamSettings } = useTeamSettings();
 
   // Get unique years from matches
   const years = useMemo(() => {
@@ -151,6 +155,24 @@ const MatchHistory = () => {
     }
   };
 
+  const handleExportMatches = () => {
+    const exportData: MatchExportData[] = filteredMatches.map((m) => ({
+      date: new Date(m.match_date).toLocaleDateString(),
+      opponent: m.opponent_name || '',
+      venue: m.venue || '',
+      our_score: m.our_score || 0,
+      opponent_score: m.opponent_score || 0,
+      result: m.result || '',
+      overs: m.overs,
+      series: m.series?.name || '',
+    }));
+    exportMatches(exportData, {
+      teamName: teamSettings?.team_name,
+      logoUrl: teamSettings?.team_logo_url,
+      watermarkHandle: teamSettings?.watermark_handle,
+    });
+  };
+
   const resultBadgeVariant = (result: string | null) => {
     if (!result) return 'secondary' as const;
     if (result === 'Won') return 'default' as const;
@@ -193,11 +215,23 @@ const MatchHistory = () => {
               <TabsTrigger value="head-to-head">Head-to-Head</TabsTrigger>
             </TabsList>
             
-            <SeasonFilter 
-              years={years} 
-              selectedYear={selectedYear} 
-              onYearChange={setSelectedYear} 
-            />
+            <div className="flex items-center gap-3">
+              <SeasonFilter 
+                years={years} 
+                selectedYear={selectedYear} 
+                onYearChange={setSelectedYear} 
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportMatches}
+                className="gap-2"
+                disabled={filteredMatches.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Export PDF
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
