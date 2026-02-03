@@ -153,59 +153,77 @@ const PlayerProfile = () => {
 
   // Handle PDF export
   const handleExportPDF = async () => {
-    if (!player || !stats) return;
+    if (!player) {
+      console.error('Cannot export: player data not loaded');
+      return;
+    }
+    
+    // Use empty stats object if stats is null
+    const statsData = stats || {
+      matches: 0, total_runs: 0, total_balls: 0, fours: 0, sixes: 0,
+      times_out: 0, thirties: 0, fifties: 0, hundreds: 0,
+      wickets: 0, runs_conceded: 0, bowling_balls: 0, maidens: 0,
+      wides: 0, no_balls: 0, dot_balls: 0, fours_conceded: 0,
+      sixes_conceded: 0, three_fers: 0, five_fers: 0,
+      catches: 0, runouts: 0, stumpings: 0, dropped_catches: 0
+    };
 
-    await exportPlayerFullStats(
-      {
-        name: player.name,
-        role: player.role,
-        batting_style: player.batting_style,
-        bowling_style: player.bowling_style,
-        matches: stats.matches || 0,
-        // Batting
-        total_runs: stats.total_runs || 0,
-        total_balls: stats.total_balls || 0,
-        fours: stats.fours || 0,
-        sixes: stats.sixes || 0,
-        times_out: stats.times_out || 0,
-        thirties: stats.thirties || 0,
-        fifties: stats.fifties || 0,
-        hundreds: stats.hundreds || 0,
-        battingAverage,
-        strikeRate,
-        // Bowling
-        wickets: stats.wickets || 0,
-        runs_conceded: stats.runs_conceded || 0,
-        bowling_balls: stats.bowling_balls || 0,
-        maidens: stats.maidens || 0,
-        wides: stats.wides || 0,
-        no_balls: stats.no_balls || 0,
-        dot_balls: stats.dot_balls || 0,
-        fours_conceded: stats.fours_conceded || 0,
-        sixes_conceded: stats.sixes_conceded || 0,
-        three_fers: stats.three_fers || 0,
-        five_fers: stats.five_fers || 0,
-        economy,
-        bowlingAverage,
-        // Fielding
-        catches: stats.catches || 0,
-        runouts: stats.runouts || 0,
-        stumpings: stats.stumpings || 0,
-        dropped_catches: stats.dropped_catches || 0,
-        // Points
-        battingPoints: iccPoints.battingPoints,
-        bowlingPoints: iccPoints.bowlingPoints,
-        fieldingPoints: iccPoints.fieldingPoints,
-        totalPoints: iccPoints.totalPoints,
-        // Season
-        seasonName: selectedSeasonName,
-      },
-      {
-        teamName: teamSettings?.team_name,
-        logoUrl: teamSettings?.team_logo_url,
-        watermarkHandle: teamSettings?.watermark_handle,
-      }
-    );
+    try {
+      await exportPlayerFullStats(
+        {
+          name: player.name,
+          role: player.role,
+          batting_style: player.batting_style,
+          bowling_style: player.bowling_style,
+          matches: statsData.matches || 0,
+          // Batting
+          total_runs: statsData.total_runs || 0,
+          total_balls: statsData.total_balls || 0,
+          fours: statsData.fours || 0,
+          sixes: statsData.sixes || 0,
+          times_out: statsData.times_out || 0,
+          thirties: statsData.thirties || 0,
+          fifties: statsData.fifties || 0,
+          hundreds: statsData.hundreds || 0,
+          battingAverage,
+          strikeRate,
+          // Bowling
+          wickets: statsData.wickets || 0,
+          runs_conceded: statsData.runs_conceded || 0,
+          bowling_balls: statsData.bowling_balls || 0,
+          maidens: statsData.maidens || 0,
+          wides: statsData.wides || 0,
+          no_balls: statsData.no_balls || 0,
+          dot_balls: statsData.dot_balls || 0,
+          fours_conceded: statsData.fours_conceded || 0,
+          sixes_conceded: statsData.sixes_conceded || 0,
+          three_fers: statsData.three_fers || 0,
+          five_fers: statsData.five_fers || 0,
+          economy,
+          bowlingAverage,
+          // Fielding
+          catches: statsData.catches || 0,
+          runouts: statsData.runouts || 0,
+          stumpings: statsData.stumpings || 0,
+          dropped_catches: statsData.dropped_catches || 0,
+          // Points
+          battingPoints: iccPoints.battingPoints,
+          bowlingPoints: iccPoints.bowlingPoints,
+          fieldingPoints: iccPoints.fieldingPoints,
+          totalPoints: iccPoints.totalPoints,
+          // Season
+          seasonName: selectedSeasonName,
+        },
+        {
+          teamName: teamSettings?.team_name,
+          logoUrl: teamSettings?.team_logo_url,
+          watermarkHandle: teamSettings?.watermark_handle,
+        }
+      );
+      console.log('PDF export completed successfully');
+    } catch (error) {
+      console.error('PDF export failed:', error);
+    }
   };
 
   return (
