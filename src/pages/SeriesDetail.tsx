@@ -13,6 +13,7 @@ import { ShareSeriesHighlightsDialog } from "@/components/ShareSeriesHighlightsD
 import { useTeamSettings } from "@/hooks/useTeamSettings";
 import { SeriesFormStrip } from "@/components/series/SeriesFormStrip";
 import { SeriesOpponentBreakdown, type OpponentStandingRow } from "@/components/series/SeriesOpponentBreakdown";
+import { PlayerOfSeriesCard } from "@/components/PlayerOfSeriesCard";
 
 interface Series {
   id: number;
@@ -455,6 +456,11 @@ export default function SeriesDetail() {
         <section className="space-y-4">
           <SeriesFormStrip matches={matches} length={5} />
           <SeriesOpponentBreakdown rows={opponentBreakdown} />
+        </section>
+
+        {/* Player of the Series */}
+        <section className="max-w-md mx-auto">
+          <PlayerOfSeriesCard seriesId={seriesId} />
         </section>
 
         {/* Top Performers */}

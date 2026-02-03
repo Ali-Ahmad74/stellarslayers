@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Wand2 } from 'lucide-react';
+import { useMatchPerformances } from '@/hooks/useMatchPerformances';
 
 interface MatchDialogProps {
   open: boolean;
@@ -44,6 +46,58 @@ export interface MatchFormData {
 }
 
 const RESULTS = ['Won', 'Lost', 'Draw', 'Tied', 'No Result'];
+
+interface PlayerOfMatchSelectorProps {
+  matchId?: number;
+  players: Array<{ id: number; name: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function PlayerOfMatchSelector({ matchId, players, value, onChange }: PlayerOfMatchSelectorProps) {
+  const { data } = useMatchPerformances(matchId);
+  const suggestedId = data?.suggestedPotmId;
+
+  const handleAutoSelect = () => {
+    if (suggestedId) {
+      onChange(String(suggestedId));
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor="potm">Player of the Match</Label>
+        {suggestedId && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs text-primary"
+            onClick={handleAutoSelect}
+          >
+            <Wand2 className="w-3 h-3" />
+            Auto-select
+          </Button>
+        )}
+      </div>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id="potm">
+          <SelectValue placeholder="Select player (optional)" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No selection</SelectItem>
+          {players.map((p) => (
+            <SelectItem key={p.id} value={String(p.id)}>
+              {p.name}
+              {p.id === suggestedId && " ⭐"}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 export function MatchDialog({ open, onOpenChange, onSave, match, tournaments = [], seriesOptions = [], players = [], isLoading }: MatchDialogProps) {
   const [matchDate, setMatchDate] = useState('');
@@ -229,22 +283,12 @@ export function MatchDialog({ open, onOpenChange, onSave, match, tournaments = [
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="potm">Player of the Match</Label>
-                <Select value={playerOfTheMatchId} onValueChange={setPlayerOfTheMatchId}>
-                  <SelectTrigger id="potm">
-                    <SelectValue placeholder="Select player (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No selection</SelectItem>
-                    {players.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <PlayerOfMatchSelector
+                matchId={match?.id}
+                players={players}
+                value={playerOfTheMatchId}
+                onChange={setPlayerOfTheMatchId}
+              />
             </div>
           </form>
         </ScrollArea>
