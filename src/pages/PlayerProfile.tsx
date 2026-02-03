@@ -22,6 +22,7 @@ import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { exportPlayerFullStats } from '@/lib/pdf-export';
+import { getUnlockedAchievements } from '@/lib/achievements';
 
 interface Player {
   id: number;
@@ -168,11 +169,21 @@ const PlayerProfile = () => {
       catches: 0, runouts: 0, stumpings: 0, dropped_catches: 0
     };
 
+    // Get unlocked achievements
+    const unlockedAchievements = getUnlockedAchievements(statsData);
+    const achievementsData = unlockedAchievements.map(a => ({
+      name: a.name,
+      icon: a.icon,
+      tier: a.tier,
+      category: a.category,
+    }));
+
     try {
       await exportPlayerFullStats(
         {
           name: player.name,
           role: player.role,
+          photoUrl: player.photo_url,
           batting_style: player.batting_style,
           bowling_style: player.bowling_style,
           matches: statsData.matches || 0,
@@ -213,6 +224,8 @@ const PlayerProfile = () => {
           totalPoints: iccPoints.totalPoints,
           // Season
           seasonName: selectedSeasonName,
+          // Achievements
+          achievements: achievementsData,
         },
         {
           teamName: teamSettings?.team_name,

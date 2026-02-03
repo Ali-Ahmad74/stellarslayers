@@ -441,10 +441,19 @@ export async function exportDetailedMatches(matches: DetailedMatchExportData[], 
   doc.save(`match-details-${new Date().toISOString().split("T")[0]}.pdf`);
 }
 
+// Achievement interface for PDF export
+export interface AchievementData {
+  name: string;
+  icon: string;
+  tier: string;
+  category: string;
+}
+
 // Player Full Detail Stats interface
 export interface PlayerFullStatsExportData {
   name: string;
   role: string;
+  photoUrl?: string | null;
   batting_style?: string | null;
   bowling_style?: string | null;
   matches: number;
@@ -485,6 +494,8 @@ export interface PlayerFullStatsExportData {
   totalPoints: number;
   // Season info
   seasonName?: string;
+  // Achievements
+  achievements?: AchievementData[];
 }
 
 /**
@@ -495,65 +506,135 @@ export async function exportPlayerFullStats(
   options: ExportOptions = {}
 ) {
   const doc = new jsPDF();
-
-  const title = `${player.name} - Player Statistics`;
-  const headerHeight = await addHeader(doc, title, options, false);
-
-  let currentY = headerHeight + 5;
-
-  // Player Info section
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
+  const pageWidth = 210;
   
-  const infoItems = [
-    `Role: ${player.role}`,
-    player.batting_style ? `Batting: ${player.batting_style}` : null,
-    player.bowling_style ? `Bowling: ${player.bowling_style}` : null,
-    `Matches: ${player.matches}`,
-    player.seasonName ? `Season: ${player.seasonName}` : null,
-  ].filter(Boolean);
-  
-  doc.text(infoItems.join("  |  "), 14, currentY);
-  doc.setTextColor(0, 0, 0);
-  currentY += 10;
+  let currentY = 15;
+  let textStartX = 14;
 
-  // Points Summary Box
-  doc.setFillColor(41, 128, 185);
-  doc.roundedRect(14, currentY, 182, 22, 3, 3, "F");
-  
-  doc.setFontSize(10);
+  // Add team logo if available (top left)
+  if (options.logoUrl) {
+    const logoBase64 = await loadImageAsBase64(options.logoUrl);
+    if (logoBase64) {
+      try {
+        const logoSize = 18;
+        doc.addImage(logoBase64, "PNG", 14, 10, logoSize, logoSize);
+        textStartX = 14 + logoSize + 6;
+      } catch {
+        // If logo fails, continue without it
+      }
+    }
+  }
+
+  // Title
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("Performance Points", 20, currentY + 7);
-  
+  doc.text(player.name, textStartX, currentY + 5);
+
+  // Team name
+  if (options.teamName) {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(options.teamName, textStartX, currentY + 12);
+    doc.setTextColor(0, 0, 0);
+  }
+
+  // Date - right aligned
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  const pointsText = `Batting: ${player.battingPoints}  |  Bowling: ${player.bowlingPoints}  |  Fielding: ${player.fieldingPoints}  |  Total: ${player.totalPoints}`;
-  doc.text(pointsText, 20, currentY + 15);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 14, currentY + 5, { align: "right" });
   doc.setTextColor(0, 0, 0);
-  currentY += 30;
 
-  // Batting Statistics Table
+  currentY = options.logoUrl ? 35 : 28;
+
+  // Player Photo (if available) - centered on right side
+  let photoEndY = currentY;
+  if (player.photoUrl) {
+    const photoBase64 = await loadImageAsBase64(player.photoUrl);
+    if (photoBase64) {
+      try {
+        const photoSize = 35;
+        doc.addImage(photoBase64, "JPEG", pageWidth - 14 - photoSize, currentY, photoSize, photoSize);
+        photoEndY = currentY + photoSize + 5;
+      } catch {
+        // If photo fails, continue without it
+      }
+    }
+  }
+
+  // Player Info section (left side)
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Player Details", 14, currentY + 5);
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  
+  currentY += 12;
+  doc.text(`Role: ${player.role}`, 14, currentY);
+  currentY += 6;
+  
+  if (player.batting_style) {
+    doc.text(`Batting Style: ${player.batting_style}`, 14, currentY);
+    currentY += 6;
+  }
+  if (player.bowling_style) {
+    doc.text(`Bowling Style: ${player.bowling_style}`, 14, currentY);
+    currentY += 6;
+  }
+  doc.text(`Matches Played: ${player.matches}`, 14, currentY);
+  currentY += 6;
+  if (player.seasonName) {
+    doc.text(`Season: ${player.seasonName}`, 14, currentY);
+    currentY += 6;
+  }
+  
+  doc.setTextColor(0, 0, 0);
+  currentY = Math.max(currentY + 8, photoEndY);
+
+  // Performance Points Summary Box
+  doc.setFillColor(41, 128, 185);
+  doc.roundedRect(14, currentY, 182, 28, 3, 3, "F");
+  
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("🏏 Batting Statistics", 14, currentY);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Performance Points", 20, currentY + 8);
+  
+  // Points in grid format
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const pointsY = currentY + 18;
+  doc.text(`Batting: ${player.battingPoints}`, 20, pointsY);
+  doc.text(`Bowling: ${player.bowlingPoints}`, 65, pointsY);
+  doc.text(`Fielding: ${player.fieldingPoints}`, 110, pointsY);
+  doc.setFont("helvetica", "bold");
+  doc.text(`TOTAL: ${player.totalPoints}`, 155, pointsY);
+  
+  doc.setTextColor(0, 0, 0);
+  currentY += 36;
+
+  // ============ BATTING STATISTICS ============
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(16, 185, 129);
+  doc.text("BATTING STATISTICS", 14, currentY);
+  doc.setTextColor(0, 0, 0);
   currentY += 4;
 
   autoTable(doc, {
     startY: currentY,
-    head: [["Runs", "Balls", "4s", "6s", "Avg", "SR", "Outs", "30s", "50s", "100s"]],
+    head: [["Runs", "Balls", "Average", "Strike Rate", "4s", "6s", "Dismissals"]],
     body: [[
       player.total_runs,
       player.total_balls,
-      player.fours,
-      player.sixes,
       player.battingAverage,
       player.strikeRate,
+      player.fours,
+      player.sixes,
       player.times_out,
-      player.thirties,
-      player.fifties,
-      player.hundreds,
     ]],
     theme: "striped",
     headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 9 },
@@ -561,27 +642,41 @@ export async function exportPlayerFullStats(
     margin: { left: 14, right: 14 },
   });
 
-  currentY = (doc as any).lastAutoTable.finalY + 12;
+  currentY = (doc as any).lastAutoTable.finalY + 4;
 
-  // Bowling Statistics Table
+  // Batting Milestones
+  autoTable(doc, {
+    startY: currentY,
+    head: [["30s", "50s", "100s"]],
+    body: [[player.thirties, player.fifties, player.hundreds]],
+    theme: "grid",
+    headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 9, textColor: [255, 255, 255] },
+    styles: { fontSize: 11, cellPadding: 4, halign: "center", fontStyle: "bold" },
+    margin: { left: 14, right: 100 },
+    tableWidth: 82,
+  });
+
+  currentY = (doc as any).lastAutoTable.finalY + 10;
+
+  // ============ BOWLING STATISTICS ============
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("🎯 Bowling Statistics", 14, currentY);
+  doc.setTextColor(239, 68, 68);
+  doc.text("BOWLING STATISTICS", 14, currentY);
+  doc.setTextColor(0, 0, 0);
   currentY += 4;
 
   autoTable(doc, {
     startY: currentY,
-    head: [["Wickets", "Runs", "Overs", "Maidens", "Econ", "Avg", "Dots", "3W", "5W"]],
+    head: [["Wickets", "Runs", "Overs", "Economy", "Average", "Maidens", "Dot Balls"]],
     body: [[
       player.wickets,
       player.runs_conceded,
       (player.bowling_balls / 6).toFixed(1),
-      player.maidens,
       player.economy,
       player.bowlingAverage,
+      player.maidens,
       player.dot_balls,
-      player.three_fers,
-      player.five_fers,
     ]],
     theme: "striped",
     headStyles: { fillColor: [239, 68, 68], fontStyle: "bold", fontSize: 9, textColor: [255, 255, 255] },
@@ -589,35 +684,39 @@ export async function exportPlayerFullStats(
     margin: { left: 14, right: 14 },
   });
 
-  currentY = (doc as any).lastAutoTable.finalY + 8;
+  currentY = (doc as any).lastAutoTable.finalY + 4;
 
-  // Bowling extras
+  // Bowling extras and milestones
   autoTable(doc, {
     startY: currentY,
-    head: [["Wides", "No Balls", "4s Conceded", "6s Conceded"]],
+    head: [["3-Wicket Hauls", "5-Wicket Hauls", "Wides", "No Balls", "4s Conceded", "6s Conceded"]],
     body: [[
+      player.three_fers,
+      player.five_fers,
       player.wides,
       player.no_balls,
       player.fours_conceded,
       player.sixes_conceded,
     ]],
     theme: "grid",
-    headStyles: { fillColor: [251, 146, 60], fontStyle: "bold", fontSize: 9 },
+    headStyles: { fillColor: [251, 146, 60], fontStyle: "bold", fontSize: 8 },
     styles: { fontSize: 10, cellPadding: 3, halign: "center" },
     margin: { left: 14, right: 14 },
   });
 
-  currentY = (doc as any).lastAutoTable.finalY + 12;
+  currentY = (doc as any).lastAutoTable.finalY + 10;
 
-  // Fielding Statistics Table
+  // ============ FIELDING STATISTICS ============
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("🧤 Fielding Statistics", 14, currentY);
+  doc.setTextColor(59, 130, 246);
+  doc.text("FIELDING STATISTICS", 14, currentY);
+  doc.setTextColor(0, 0, 0);
   currentY += 4;
 
   autoTable(doc, {
     startY: currentY,
-    head: [["Catches", "Run Outs", "Stumpings", "Dropped"]],
+    head: [["Catches", "Run Outs", "Stumpings", "Dropped Catches"]],
     body: [[
       player.catches,
       player.runouts,
@@ -629,6 +728,48 @@ export async function exportPlayerFullStats(
     styles: { fontSize: 10, cellPadding: 3, halign: "center" },
     margin: { left: 14, right: 14 },
   });
+
+  currentY = (doc as any).lastAutoTable.finalY + 10;
+
+  // ============ ACHIEVEMENTS ============
+  if (player.achievements && player.achievements.length > 0) {
+    // Check if we need a new page
+    if (currentY > 240) {
+      doc.addPage();
+      currentY = 20;
+    }
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(168, 85, 247);
+    doc.text("ACHIEVEMENTS UNLOCKED", 14, currentY);
+    doc.setTextColor(0, 0, 0);
+    currentY += 4;
+
+    // Group achievements by category
+    const achievementRows = player.achievements.map(a => [
+      a.icon,
+      a.name,
+      a.category.charAt(0).toUpperCase() + a.category.slice(1),
+      a.tier.charAt(0).toUpperCase() + a.tier.slice(1),
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["", "Achievement", "Category", "Tier"]],
+      body: achievementRows,
+      theme: "striped",
+      headStyles: { fillColor: [168, 85, 247], fontStyle: "bold", fontSize: 9 },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 12, halign: "center" },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 30 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+  }
 
   // Add footers
   addFooters(doc, options, false);
