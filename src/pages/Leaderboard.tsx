@@ -107,7 +107,10 @@ const Leaderboard = () => {
         stumpings: s?.stumpings || 0,
       };
     });
-    exportPlayerStats(exportData, teamSettings?.team_name);
+    exportPlayerStats(exportData, { 
+      teamName: teamSettings?.team_name, 
+      logoUrl: teamSettings?.team_logo_url 
+    });
   };
   const getLeaderboardData = () => {
     // For category tabs, return empty - we use season-filtered rankings instead
