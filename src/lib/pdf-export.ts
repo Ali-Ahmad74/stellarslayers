@@ -636,5 +636,22 @@ export async function exportPlayerFullStats(
   addFooters(doc, options, false);
 
   const safeName = player.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
-  doc.save(`${safeName}-stats-${new Date().toISOString().split("T")[0]}.pdf`);
+  const fileName = `${safeName}-stats-${new Date().toISOString().split("T")[0]}.pdf`;
+  
+  // Use blob output for better mobile compatibility
+  const pdfBlob = doc.output('blob');
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  
+  // Cleanup
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  }, 100);
 }
