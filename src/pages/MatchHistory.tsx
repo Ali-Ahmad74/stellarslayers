@@ -12,7 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SiteFooter } from '@/components/SiteFooter';
 import { MatchScorecard } from '@/components/MatchScorecard';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
-import { exportMatches, type MatchExportData } from '@/lib/pdf-export';
+import { 
+  exportMatches, 
+  exportDetailedMatches,
+  type MatchExportData,
+  type DetailedMatchExportData,
+  type BattingScorecardRow,
+  type BowlingScorecardRow,
+  type FieldingScorecardRow
+} from '@/lib/pdf-export';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import {
   Select,
   SelectContent,
@@ -173,6 +182,89 @@ const MatchHistory = () => {
     });
   };
 
+  const formatOvers = (balls: number) => {
+    const overs = Math.floor(balls / 6);
+    const remainingBalls = balls % 6;
+    return remainingBalls > 0 ? `${overs}.${remainingBalls}` : `${overs}`;
+  };
+
+  const handleExportDetailedMatches = async () => {
+    // Fetch scorecards for all filtered matches
+    const detailedData: DetailedMatchExportData[] = [];
+
+    for (const match of filteredMatches) {
+      const [batRes, bowlRes, fieldRes] = await Promise.all([
+        supabaseClient
+          .from("batting_inputs")
+          .select("player_id, runs, balls, fours, sixes, out, players(name)")
+          .eq("match_id", match.id)
+          .order("runs", { ascending: false }),
+        supabaseClient
+          .from("bowling_inputs")
+          .select("player_id, balls, runs_conceded, wickets, maidens, wides, no_balls, players(name)")
+          .eq("match_id", match.id)
+          .order("wickets", { ascending: false }),
+        supabaseClient
+          .from("fielding_inputs")
+          .select("player_id, catches, runouts, stumpings, players(name)")
+          .eq("match_id", match.id),
+      ]);
+
+      const batting: BattingScorecardRow[] = (batRes.data ?? []).map((b: any) => ({
+        player_name: b.players?.name || "Unknown",
+        runs: Number(b.runs ?? 0),
+        balls: Number(b.balls ?? 0),
+        fours: Number(b.fours ?? 0),
+        sixes: Number(b.sixes ?? 0),
+        out: Boolean(b.out),
+      }));
+
+      const bowling: BowlingScorecardRow[] = (bowlRes.data ?? []).map((b: any) => ({
+        player_name: b.players?.name || "Unknown",
+        overs: formatOvers(Number(b.balls ?? 0)),
+        maidens: Number(b.maidens ?? 0),
+        runs_conceded: Number(b.runs_conceded ?? 0),
+        wickets: Number(b.wickets ?? 0),
+        economy: Number(b.balls ?? 0) > 0 
+          ? (Number(b.runs_conceded ?? 0) / (Number(b.balls ?? 0) / 6)).toFixed(2) 
+          : "0.00",
+        extras: Number(b.wides ?? 0) + Number(b.no_balls ?? 0) > 0 
+          ? `${b.wides}wd, ${b.no_balls}nb` 
+          : "-",
+      }));
+
+      const fielding: FieldingScorecardRow[] = (fieldRes.data ?? [])
+        .filter((f: any) => Number(f.catches ?? 0) > 0 || Number(f.runouts ?? 0) > 0 || Number(f.stumpings ?? 0) > 0)
+        .map((f: any) => ({
+          player_name: f.players?.name || "Unknown",
+          catches: Number(f.catches ?? 0),
+          runouts: Number(f.runouts ?? 0),
+          stumpings: Number(f.stumpings ?? 0),
+        }));
+
+      detailedData.push({
+        matchId: match.id,
+        date: new Date(match.match_date).toLocaleDateString(),
+        opponent: match.opponent_name || '',
+        venue: match.venue || '',
+        our_score: match.our_score || 0,
+        opponent_score: match.opponent_score || 0,
+        result: match.result || '',
+        overs: match.overs,
+        series: match.series?.name || '',
+        batting,
+        bowling,
+        fielding,
+      });
+    }
+
+    exportDetailedMatches(detailedData, {
+      teamName: teamSettings?.team_name,
+      logoUrl: teamSettings?.team_logo_url,
+      watermarkHandle: teamSettings?.watermark_handle,
+    });
+  };
+
   const resultBadgeVariant = (result: string | null) => {
     if (!result) return 'secondary' as const;
     if (result === 'Won') return 'default' as const;
@@ -229,7 +321,17 @@ const MatchHistory = () => {
                 disabled={filteredMatches.length === 0}
               >
                 <Download className="w-4 h-4" />
-                Export PDF
+                Summary PDF
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleExportDetailedMatches}
+                className="gap-2"
+                disabled={filteredMatches.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Full Details PDF
               </Button>
             </div>
           </div>
