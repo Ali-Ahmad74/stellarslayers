@@ -36,6 +36,40 @@ export interface MatchExportData {
   series: string;
 }
 
+// Detailed match export with scorecards
+export interface BattingScorecardRow {
+  player_name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  out: boolean;
+}
+
+export interface BowlingScorecardRow {
+  player_name: string;
+  overs: string;
+  maidens: number;
+  runs_conceded: number;
+  wickets: number;
+  economy: string;
+  extras: string;
+}
+
+export interface FieldingScorecardRow {
+  player_name: string;
+  catches: number;
+  runouts: number;
+  stumpings: number;
+}
+
+export interface DetailedMatchExportData extends MatchExportData {
+  matchId: number;
+  batting: BattingScorecardRow[];
+  bowling: BowlingScorecardRow[];
+  fielding: FieldingScorecardRow[];
+}
+
 export interface ExportOptions {
   teamName?: string;
   logoUrl?: string | null;
@@ -261,4 +295,150 @@ export async function exportMatches(matches: MatchExportData[], options: ExportO
   addFooters(doc, options, false);
 
   doc.save(`matches-${new Date().toISOString().split("T")[0]}.pdf`);
+}
+
+/**
+ * Export detailed matches with full scorecards (batting, bowling, fielding)
+ */
+export async function exportDetailedMatches(matches: DetailedMatchExportData[], options: ExportOptions = {}) {
+  const doc = new jsPDF();
+
+  const title = options.teamName ? `${options.teamName} - Match Details` : "Match Details";
+  const headerHeight = await addHeader(doc, title, options, false);
+
+  // Summary
+  const won = matches.filter((m) => m.result === "Won").length;
+  const lost = matches.filter((m) => m.result === "Lost").length;
+  const other = matches.length - won - lost;
+
+  doc.setFontSize(11);
+  doc.text(`Total Matches: ${matches.length}  |  Won: ${won}  |  Lost: ${lost}  |  Other: ${other}`, 14, headerHeight + 6);
+
+  let currentY = headerHeight + 14;
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+
+    // Check if we need a new page
+    if (currentY > 240) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    // Match header
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(41, 128, 185);
+    doc.text(`vs ${match.opponent || "Unknown"} - ${match.result || ""}`, 14, currentY);
+    doc.setTextColor(0, 0, 0);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${match.date} | ${match.venue || "-"} | Score: ${match.our_score}-${match.opponent_score} | ${match.overs} overs`, 14, currentY + 5);
+
+    currentY += 12;
+
+    // Batting Scorecard
+    if (match.batting.length > 0) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Batting", 14, currentY);
+      currentY += 2;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Player", "R", "B", "4s", "6s", "SR", "Status"]],
+        body: match.batting.map((b) => [
+          b.player_name,
+          b.runs,
+          b.balls,
+          b.fours,
+          b.sixes,
+          b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : "0.0",
+          b.out ? "Out" : "Not Out",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [76, 175, 80], fontStyle: "bold", fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        margin: { left: 14, right: 14, bottom: 5 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    // Bowling Scorecard
+    if (match.bowling.length > 0) {
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Bowling", 14, currentY);
+      currentY += 2;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Player", "O", "M", "R", "W", "Econ", "Extras"]],
+        body: match.bowling.map((b) => [
+          b.player_name,
+          b.overs,
+          b.maidens,
+          b.runs_conceded,
+          b.wickets,
+          b.economy,
+          b.extras || "-",
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [244, 67, 54], fontStyle: "bold", fontSize: 8, textColor: [255, 255, 255] },
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        margin: { left: 14, right: 14, bottom: 5 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    // Fielding Highlights
+    if (match.fielding.length > 0) {
+      if (currentY > 260) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Fielding", 14, currentY);
+      currentY += 2;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Player", "Catches", "Run Outs", "Stumpings"]],
+        body: match.fielding.map((f) => [f.player_name, f.catches, f.runouts, f.stumpings]),
+        theme: "grid",
+        headStyles: { fillColor: [255, 152, 0], fontStyle: "bold", fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        margin: { left: 14, right: 14, bottom: 5 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Add separator between matches
+    if (i < matches.length - 1) {
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      } else {
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, currentY, 196, currentY);
+        currentY += 8;
+      }
+    }
+  }
+
+  // Add footers to all pages
+  addFooters(doc, options, false);
+
+  doc.save(`match-details-${new Date().toISOString().split("T")[0]}.pdf`);
 }
