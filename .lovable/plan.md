@@ -1,278 +1,187 @@
 
 
-# Live Cricket Scoring App - Integration Plan
+# Security Review Report
 
-## Overview
+## Summary
 
-Yeh plan ek **dedicated Live Scoring interface** create karega jo current Stellar Slayers website ke saath fully integrated hoga. Jab match live score ho raha hoga, toh real-time updates database mein jayenge aur match end hone par saari stats automatically update ho jayengi.
-
----
-
-## Key Features
-
-### 1. Live Scoring Interface (Scorer View)
-- **Ball-by-Ball Scoring**: Har delivery ke baad score update
-- **Batsman Selector**: Current striker aur non-striker select karna
-- **Bowler Selector**: Current bowler select karna  
-- **Quick Action Buttons**: 0, 1, 2, 3, 4, 6, Wide, No Ball, Wicket
-- **Wicket Details**: Caught, Bowled, LBW, Run Out, Stumped options
-- **Over Summary**: Current over ka visual display
-- **Score Display**: Live total score, wickets, overs
-
-### 2. Real-time Sync with Website
-- **Supabase Realtime**: Database changes instantly sync
-- **Live Match View**: Spectators can see live score on website
-- **Auto Stats Update**: Match end hone par player stats automatically calculate
-
-### 3. Database Changes
-
-New tables:
-```text
-+---------------------------+
-|     live_match_state      |
-+---------------------------+
-| match_id (FK)             |
-| current_innings           |
-| batting_team_score        |
-| wickets                   |
-| overs                     |
-| balls                     |
-| current_striker_id (FK)   |
-| current_non_striker_id    |
-| current_bowler_id (FK)    |
-| is_live                   |
-| last_updated              |
-+---------------------------+
-
-+---------------------------+
-|      ball_by_ball         |
-+---------------------------+
-| id                        |
-| match_id (FK)             |
-| over_number               |
-| ball_number               |
-| batsman_id (FK)           |
-| bowler_id (FK)            |
-| runs_scored               |
-| extras_type               |
-| extras_runs               |
-| is_wicket                 |
-| wicket_type               |
-| fielder_id                |
-| timestamp                 |
-+---------------------------+
-```
+This security review analyzed your cricket statistics application with a Lovable Cloud backend. The review identified **6 security issues**: 2 critical, 2 warnings, and 2 informational findings.
 
 ---
 
-## User Flow
+## Critical Issues (Immediate Action Required)
+
+### 1. Admin Privilege Escalation via Self-Removal of Other Admins
+
+**Severity**: CRITICAL  
+**Location**: `src/pages/Admin.tsx` (lines 150-161)
+
+**Problem**: The admin page contains code that automatically deletes all admin roles EXCEPT the currently signed-in user's role. This means any admin who logs in will remove all other admins from the system.
 
 ```text
-Admin Dashboard                    Live Scoring App
-      |                                   |
-      v                                   |
- Create Match  ----------------------->  Select Match
-      |                                   |
-      |                                   v
-      |                            Select Playing XI
-      |                                   |
-      |                                   v
-      |                            Start Live Scoring
-      |                                   |
-      |                                   v
-      |                            Score Ball-by-Ball
-      |                                   |
-      |                                   |
-      |    <---- Realtime Sync ---->      |
-      |                                   |
-      |                                   v
-      |                            End Match
-      |                                   |
-      v                                   |
-Stats Auto-Updated <---------------------|
+Code Flow:
+  Admin User A logs in
+        |
+        v
+  useEffect triggers
+        |
+        v
+  DELETE FROM user_roles WHERE role='admin' AND user_id != A
+        |
+        v
+  All other admins lose access!
 ```
 
----
+**Impact**: 
+- Any malicious or confused admin can lock out all other administrators
+- Could be exploited by the first person to discover this behavior
+- Creates a single point of failure for admin access
 
-## Technical Implementation
-
-### Phase 1: Database Setup
-1. Create `live_match_state` table - match ki current state store karega
-2. Create `ball_by_ball` table - har delivery ka record
-3. Enable Realtime on both tables
-4. RLS policies for admin-only write, public read
-
-### Phase 2: Live Scoring UI
-New pages/components:
-- `/scorer/:matchId` - Main scoring interface
-- `LiveScoringPanel.tsx` - Ball-by-ball input controls
-- `BatsmanCard.tsx` - Current batsmen display
-- `BowlerCard.tsx` - Current bowler display
-- `ScoreBoard.tsx` - Live score display
-- `OverSummary.tsx` - Current over visualization
-
-### Phase 3: Real-time Viewers
-- `/live/:matchId` - Public live match view (spectators ke liye)
-- Realtime subscription to `live_match_state`
-- Commentary feed from `ball_by_ball`
-
-### Phase 4: Stats Aggregation
-- Edge function: `finalize-match` 
-  - Triggered when match ends
-  - `ball_by_ball` se batting/bowling/fielding inputs calculate
-  - Existing tables mein data insert/update
-  - Player stats automatically refresh
-
-### Phase 5: Mobile Optimization
-- Touch-friendly scoring buttons
-- Landscape mode support
-- PWA offline capability for poor network
+**Remediation**: Remove this dangerous code block entirely. Admin management should be done through explicit actions, not automatic deletion.
 
 ---
 
-## Technical Details
+### 2. Security Definer View Detected
 
-### New Files to Create
+**Severity**: CRITICAL  
+**Location**: Database views (`player_stats`, `team_settings_public`)
 
-| File | Purpose |
-|------|---------|
-| `src/pages/Scorer.tsx` | Live scoring page |
-| `src/pages/LiveMatch.tsx` | Public live view page |
-| `src/components/scoring/LiveScoringPanel.tsx` | Main scoring controls |
-| `src/components/scoring/ScoreBoard.tsx` | Score display |
-| `src/components/scoring/BatsmanCard.tsx` | Batsman info |
-| `src/components/scoring/BowlerCard.tsx` | Bowler info |
-| `src/components/scoring/OverSummary.tsx` | Over visualization |
-| `src/components/scoring/WicketDialog.tsx` | Wicket type selection |
-| `src/components/scoring/PlayerSelector.tsx` | Select batsman/bowler |
-| `src/hooks/useLiveMatch.ts` | Realtime match state hook |
-| `src/hooks/useBallByBall.ts` | Ball history hook |
-| `supabase/functions/finalize-match/index.ts` | Stats calculation |
+**Problem**: The `player_stats` view is defined with `SECURITY DEFINER`, meaning it executes with the permissions of the view creator (typically a superuser) rather than the querying user. This bypasses Row Level Security policies.
 
-### Database Migrations
+**Impact**: Could allow unauthorized data access if the view is modified or if RLS policies are added to underlying tables.
+
+**Remediation**: Recreate the view as `SECURITY INVOKER` (the default) to ensure RLS policies are properly enforced:
 
 ```sql
--- live_match_state table
-CREATE TABLE live_match_state (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
-  is_live BOOLEAN DEFAULT false,
-  current_innings INTEGER DEFAULT 1,
-  total_runs INTEGER DEFAULT 0,
-  wickets INTEGER DEFAULT 0,
-  overs INTEGER DEFAULT 0,
-  balls INTEGER DEFAULT 0,
-  current_striker_id INTEGER REFERENCES players(id),
-  current_non_striker_id INTEGER REFERENCES players(id),
-  current_bowler_id INTEGER REFERENCES players(id),
-  target INTEGER,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(match_id)
-);
-
--- ball_by_ball table
-CREATE TABLE ball_by_ball (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
-  innings INTEGER DEFAULT 1,
-  over_number INTEGER NOT NULL,
-  ball_number INTEGER NOT NULL,
-  batsman_id INTEGER REFERENCES players(id),
-  bowler_id INTEGER REFERENCES players(id),
-  runs_scored INTEGER DEFAULT 0,
-  extras_type TEXT, -- 'wide', 'noball', 'bye', 'legbye'
-  extras_runs INTEGER DEFAULT 0,
-  is_wicket BOOLEAN DEFAULT false,
-  wicket_type TEXT, -- 'caught', 'bowled', 'lbw', 'runout', 'stumped'
-  fielder_id INTEGER REFERENCES players(id),
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Enable realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE live_match_state;
-ALTER PUBLICATION supabase_realtime ADD TABLE ball_by_ball;
-```
-
-### Scoring UI Design
-
-```text
-+--------------------------------------------------+
-|              STELLAR SLAYERS vs OPPONENT         |
-|                   Live Match                     |
-+--------------------------------------------------+
-|   SCORE: 156/4        OVERS: 15.3        RR: 10.2|
-+--------------------------------------------------+
-|                                                  |
-|  STRIKER          |    NON-STRIKER              |
-|  Ahmad Muavia     |    Player B                 |
-|  45* (32)         |    23* (18)                 |
-|  SR: 140.6        |    SR: 127.8                |
-|                                                  |
-+--------------------------------------------------+
-|  BOWLER: Player C                                |
-|  2-0-18-1  |  This Over: . 1 4 W . 2            |
-+--------------------------------------------------+
-|                                                  |
-|  [0] [1] [2] [3] [4] [6]                        |
-|                                                  |
-|  [Wide] [No Ball] [Bye] [Leg Bye]               |
-|                                                  |
-|  [WICKET]                                        |
-|                                                  |
-+--------------------------------------------------+
-|  [Undo Last Ball]          [End Over]           |
-+--------------------------------------------------+
+-- Drop and recreate with SECURITY INVOKER
+DROP VIEW IF EXISTS player_stats;
+CREATE VIEW player_stats AS ... -- same definition
+-- SECURITY INVOKER is the default, so no need to specify
 ```
 
 ---
 
-## Integration Points
+## Warning Issues (Should Address Soon)
 
-### With Existing Admin Panel
-- Match list mein "Start Live Scoring" button
-- Active live match indicator
-- Quick access to scorer page
+### 3. Leaked Password Protection Disabled
 
-### With Existing Stats System
-- Finalize-match function `batting_inputs`, `bowling_inputs`, `fielding_inputs` mein data insert karega
-- Existing views aur rankings automatically update
+**Severity**: WARNING  
+**Location**: Authentication settings
 
-### With Website Homepage
-- "Live Now" banner agar koi match chal raha ho
-- Click karke live score page pe redirect
+**Problem**: The password leak detection feature (HaveIBeenPwned integration) is currently disabled. This means users can register with passwords that have been exposed in known data breaches.
+
+**Impact**: Accounts could be created with compromised passwords, making them vulnerable to credential stuffing attacks.
+
+**Remediation**: Enable leaked password protection in your backend authentication settings. This can be done through the Cloud dashboard.
 
 ---
 
-## Estimated Scope
+### 4. Player Statistics View Has No RLS Policies
 
-| Component | Effort |
-|-----------|--------|
-| Database tables + RLS | Small |
-| Live Scoring UI | Medium |
-| Realtime sync | Medium |
-| Stats aggregation edge function | Medium |
-| Public live view | Small |
-| Mobile optimization | Small |
+**Severity**: WARNING  
+**Location**: `player_stats` view
+
+**Problem**: The `player_stats` view has no RLS policies defined. While it's a view (so it inherits from underlying tables), having explicit policies ensures consistent access control.
+
+**Impact**: Currently relies on underlying table RLS, which is working correctly, but adds complexity to security auditing.
+
+**Remediation**: Since this is a publicly-readable statistics view, consider adding an explicit public read policy or documenting that it intentionally inherits from underlying tables.
 
 ---
 
-## Implementation Status
+## Informational Findings
 
-| Step | Status |
+### 5. Team Settings Public View Configuration
+
+**Severity**: INFO  
+**Location**: `team_settings_public` view, `useTeamSettings.ts`
+
+**Status**: PROPERLY SECURED
+
+The application correctly uses a public view (`team_settings_public`) that excludes the `admin_owner_user_id` field, preventing exposure of admin user IDs. The `useTeamSettings` hook queries this secure view instead of the main table.
+
+---
+
+### 6. Match Templates Hidden from Public
+
+**Severity**: INFO  
+**Location**: `match_templates` table RLS policies
+
+**Status**: CORRECTLY CONFIGURED
+
+Match templates are admin-only, which is appropriate for internal team management data.
+
+---
+
+## Security Posture Summary
+
+| Area | Status |
 |------|--------|
-| ✅ Database tables + RLS | Completed |
-| ✅ Live scoring UI | Completed |
-| ✅ Realtime sync | Completed |
-| ✅ Stats finalization edge function | Completed |
-| ✅ Routes added to App.tsx | Completed |
-| ✅ Live scoring button in Admin | Completed |
-| ⏳ Testing end-to-end | Pending |
+| Authentication Implementation | Good - Uses Supabase Auth correctly |
+| Role-Based Access Control | Good - Uses separate `user_roles` table |
+| RLS Policies | Mostly Good - 30 policies covering most tables |
+| Edge Function Security | Good - Validates admin role server-side |
+| Storage Policies | Good - Admin-only uploads, public reads |
+| Input Validation | Good - Uses Zod schemas |
+| Session Management | Good - Uses proper auth state listeners |
 
-### Routes Added
-- `/scorer/:id` - Admin-only live scoring interface
-- `/live/:id` - Public spectator view with realtime updates
+---
 
-### Edge Function
-- `finalize-match` - Aggregates ball_by_ball data into batting/bowling/fielding_inputs tables
+## Recommended Fixes
+
+### Immediate Priority
+
+1. **Remove the admin self-removal code** from `src/pages/Admin.tsx` (lines 150-161)
+2. **Enable leaked password protection** via Cloud dashboard
+
+### Short-Term
+
+3. **Recreate the `player_stats` view** without SECURITY DEFINER
+4. **Add explicit RLS policy** for `team_settings_public` view
+
+---
+
+## Technical Implementation Details
+
+### Fix 1: Remove Dangerous Admin Code
+
+Remove lines 150-161 from `src/pages/Admin.tsx`:
+
+```typescript
+// DELETE THIS ENTIRE BLOCK:
+useEffect(() => {
+  if (loading || !user || !isAdmin) return;
+  supabase
+    .from('user_roles')
+    .delete()
+    .eq('role', 'admin')
+    .neq('user_id', user.id)
+    .then(() => {
+      // No-op; if there are no other admins, nothing happens.
+    });
+}, [loading, user, isAdmin]);
+```
+
+### Fix 2: Database Migration for View Security
+
+```sql
+-- Fix player_stats view to use SECURITY INVOKER
+DROP VIEW IF EXISTS public.player_stats;
+CREATE VIEW public.player_stats AS
+  SELECT p.id AS player_id,
+    count(DISTINCT b.match_id) AS matches,
+    -- ... rest of view definition
+  FROM players p
+    LEFT JOIN batting_inputs b ON p.id = b.player_id
+    LEFT JOIN bowling_inputs bo ON p.id = bo.player_id
+    LEFT JOIN fielding_inputs f ON p.id = f.player_id
+  GROUP BY p.id;
+
+-- Add explicit RLS policy for the view
+CREATE POLICY "Public read access for player_stats"
+  ON player_stats FOR SELECT TO public USING (true);
+```
+
+### Fix 3: Enable Leaked Password Protection
+
+Navigate to Cloud Dashboard > Authentication Settings and enable "Leaked Password Protection".
 

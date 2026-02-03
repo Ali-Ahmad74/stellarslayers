@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays, Trophy, Info, AlertCircle, Radio } from 'lucide-react';
+import { Users, Calendar, Settings, Plus, Edit, Trash2, LogOut, Activity, CalendarDays, Trophy, Info, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -1106,14 +1106,6 @@ const Admin = () => {
                               {isAdmin && (
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      onClick={() => navigate(`/scorer/${match.id}`)}
-                                      title="Live Scoring"
-                                    >
-                                      <Radio className="w-4 h-4 text-destructive" />
-                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleEditMatch(match)}>
                                       <Edit className="w-4 h-4" />
                                     </Button>
