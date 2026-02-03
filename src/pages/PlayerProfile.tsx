@@ -154,17 +154,17 @@ const PlayerProfile = () => {
       
       <main className="container py-8">
         {/* Back Button + Season Filter */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <Link to="/">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
               Back to Rankings
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Season:</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Season:</span>
               <PlayerSeasonFilter 
                 seasons={seasons}
                 selectedSeasonId={selectedSeasonId}
@@ -172,7 +172,7 @@ const PlayerProfile = () => {
                 loading={seasonsLoading}
               />
             </div>
-            <Button onClick={() => setShareOpen(true)}>
+            <Button onClick={() => setShareOpen(true)} className="whitespace-nowrap">
               Share Player Card
             </Button>
           </div>
