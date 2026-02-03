@@ -172,9 +172,7 @@ function addFooters(doc: jsPDF, options: ExportOptions, isLandscape: boolean = f
       doc.text(options.teamName, 14, pageHeight - 10);
     }
 
-    // Generated with Lovable - right
-    doc.setFontSize(8);
-    doc.text("Generated with Lovable", pageWidth - 14, pageHeight - 10, { align: "right" });
+    // Reset text color
 
     // Reset text color
     doc.setTextColor(0, 0, 0);
