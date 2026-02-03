@@ -16,6 +16,7 @@ import { usePointHistory } from '@/hooks/usePointHistory';
 import { useBowlingRankingsBySeason } from '@/hooks/useBowlingRankingsBySeason';
 import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
 import { useFieldingRankingsBySeason } from '@/hooks/useFieldingRankingsBySeason';
+import { useOverallRankingsBySeason } from '@/hooks/useOverallRankingsBySeason';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamSettings } from '@/hooks/useTeamSettings';
@@ -48,11 +49,16 @@ const Leaderboard = () => {
   const [sharePlayerId, setSharePlayerId] = useState<number | null>(null);
 
   // Season filter states for each category
+  const [overallSeasonId, setOverallSeasonId] = useState<string>('all');
   const [battingSeasonId, setBattingSeasonId] = useState<string>('all');
   const [bowlingSeasonId, setBowlingSeasonId] = useState<string>('all');
   const [fieldingSeasonId, setFieldingSeasonId] = useState<string>('all');
 
   // Rankings with season filters
+  const {
+    rankings: overallRankings,
+    loading: overallLoading
+  } = useOverallRankingsBySeason(overallSeasonId);
   const {
     rankings: battingRankings,
     loading: battingLoading
@@ -152,25 +158,21 @@ const Leaderboard = () => {
       case 'fielding':
         return fieldingRankings;
       default:
-        return leaderboardData;
+        return overallSeasonId === 'all' ? leaderboardData : overallRankings;
     }
   };
   const displayData = getDisplayData();
-  const isCategoryLoading = activeTab === 'batting' ? battingLoading : activeTab === 'bowling' ? bowlingLoading : activeTab === 'fielding' ? fieldingLoading : false;
+  const isCategoryLoading = activeTab === 'overall' ? (overallSeasonId !== 'all' && overallLoading) : activeTab === 'batting' ? battingLoading : activeTab === 'bowling' ? bowlingLoading : activeTab === 'fielding' ? fieldingLoading : false;
 
-  // Get top 3 for podium display
-  const topThree = leaderboardData.slice(0, 3);
-  const getPointsForTab = (player: typeof leaderboardData[0]) => {
-    switch (activeTab) {
-      case 'batting':
-        return player.points.battingPoints;
-      case 'bowling':
-        return player.points.bowlingPoints;
-      case 'fielding':
-        return player.points.fieldingPoints;
-      default:
-        return player.points.totalPoints;
+  // Get top 3 for podium display (only show when no season filter on overall)
+  const topThree = overallSeasonId === 'all' ? leaderboardData.slice(0, 3) : overallRankings.slice(0, 3);
+  
+  // Helper to get points for podium (works with both data types)
+  const getPodiumPoints = (player: typeof topThree[0]) => {
+    if ('points' in player) {
+      return player.points.totalPoints;
     }
+    return player.totalPoints;
   };
   const getTrendIcon = (change?: number) => {
     if (!change || change === 0) return <Minus className="w-4 h-4 text-muted-foreground" />;
@@ -330,7 +332,7 @@ const Leaderboard = () => {
                       <PlayerAvatar name={topThree[1].name} size="lg" />
                       <p className="font-bold mt-2 text-sm truncate">{topThree[1].name}</p>
                       <p className="text-2xl font-display font-bold text-gray-600 dark:text-gray-300">
-                        {getPointsForTab(topThree[1])}
+                        {getPodiumPoints(topThree[1])}
                       </p>
                       <p className="text-xs text-muted-foreground">pts</p>
                     </motion.div>
@@ -348,7 +350,7 @@ const Leaderboard = () => {
                       <PlayerAvatar name={topThree[0].name} size="xl" />
                       <p className="font-bold mt-2 truncate">{topThree[0].name}</p>
                       <p className="text-3xl font-display font-bold text-yellow-700 dark:text-yellow-200">
-                        {getPointsForTab(topThree[0])}
+                        {getPodiumPoints(topThree[0])}
                       </p>
                       <p className="text-xs text-yellow-700/70 dark:text-yellow-200/70">pts</p>
                     </motion.div>
@@ -365,7 +367,7 @@ const Leaderboard = () => {
                       <PlayerAvatar name={topThree[2].name} size="md" />
                       <p className="font-bold mt-2 text-sm truncate">{topThree[2].name}</p>
                       <p className="text-xl font-display font-bold text-orange-700 dark:text-orange-200">
-                        {getPointsForTab(topThree[2])}
+                        {getPodiumPoints(topThree[2])}
                       </p>
                       <p className="text-xs text-muted-foreground">pts</p>
                     </motion.div>
@@ -392,33 +394,39 @@ const Leaderboard = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Sorting options for overall tab */}
-            {activeTab === 'overall' && <div className="flex gap-2 mb-4 flex-wrap">
-                <span className="text-sm text-muted-foreground self-center">Sort by:</span>
-                {[{
-              key: 'totalPoints',
-              label: 'Total'
-            }, {
-              key: 'battingPoints',
-              label: 'Batting'
-            }, {
-              key: 'bowlingPoints',
-              label: 'Bowling'
-            }, {
-              key: 'fieldingPoints',
-              label: 'Fielding'
-            }, {
-              key: 'weeklyChange',
-              label: '📈 Weekly'
-            }, {
-              key: 'monthlyChange',
-              label: '📊 Monthly'
-            }].map(({
-              key,
-              label
-            }) => <Button key={key} variant={sortKey === key ? 'default' : 'outline'} size="sm" onClick={() => setSortKey(key as SortKey)}>
-                    {label}
-                  </Button>)}
+            {/* Season filter and sorting options for overall tab */}
+            {activeTab === 'overall' && <div className="space-y-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">Filter by Season:</span>
+                  <RankingSeasonFilter selectedSeason={overallSeasonId} onSeasonChange={setOverallSeasonId} />
+                </div>
+                {overallSeasonId === 'all' && <div className="flex gap-2 flex-wrap">
+                  <span className="text-sm text-muted-foreground self-center">Sort by:</span>
+                  {[{
+                    key: 'totalPoints',
+                    label: 'Total'
+                  }, {
+                    key: 'battingPoints',
+                    label: 'Batting'
+                  }, {
+                    key: 'bowlingPoints',
+                    label: 'Bowling'
+                  }, {
+                    key: 'fieldingPoints',
+                    label: 'Fielding'
+                  }, {
+                    key: 'weeklyChange',
+                    label: '📈 Weekly'
+                  }, {
+                    key: 'monthlyChange',
+                    label: '📊 Monthly'
+                  }].map(({
+                    key,
+                    label
+                  }) => <Button key={key} variant={sortKey === key ? 'default' : 'outline'} size="sm" onClick={() => setSortKey(key as SortKey)}>
+                        {label}
+                      </Button>)}
+                </div>}
               </div>}
 
             {/* Season filter for category tabs */}
@@ -458,19 +466,21 @@ const Leaderboard = () => {
                             <TableHead className="text-center font-semibold">Bowl Pts</TableHead>
                             <TableHead className="text-center font-semibold">Field Pts</TableHead>
                             <TableHead className="text-center font-semibold text-primary">Total Pts</TableHead>
-                            <TableHead className="text-center font-semibold">
-                              <div className="flex items-center justify-center gap-1">
-                                <TrendingUp className="w-3 h-3" />
-                                Week
-                              </div>
-                            </TableHead>
-                            <TableHead className="text-center font-semibold">
-                              <div className="flex items-center justify-center gap-1">
-                                <TrendingUp className="w-3 h-3" />
-                                Month
-                              </div>
-                            </TableHead>
-                            <TableHead className="text-center font-semibold w-16">Share</TableHead>
+                            {overallSeasonId === 'all' && <>
+                              <TableHead className="text-center font-semibold">
+                                <div className="flex items-center justify-center gap-1">
+                                  <TrendingUp className="w-3 h-3" />
+                                  Week
+                                </div>
+                              </TableHead>
+                              <TableHead className="text-center font-semibold">
+                                <div className="flex items-center justify-center gap-1">
+                                  <TrendingUp className="w-3 h-3" />
+                                  Month
+                                </div>
+                              </TableHead>
+                              <TableHead className="text-center font-semibold w-16">Share</TableHead>
+                            </>}
                           </> : activeTab === 'batting' ? <>
                             <TableHead className="text-center font-semibold">Runs</TableHead>
                             <TableHead className="text-center font-semibold">SR</TableHead>
@@ -594,7 +604,39 @@ const Leaderboard = () => {
                               {player.rating}
                             </TableCell>
                           </motion.tr>) :
-                    // Overall tab uses leaderboardData
+                    // Overall tab - show season-filtered or all-time data
+                    overallSeasonId !== 'all' ?
+                    // Season-filtered overall rankings
+                    overallRankings.map((player, index) => <motion.tr key={player.id} initial={{
+                      opacity: 0,
+                      x: -20
+                    }} animate={{
+                      opacity: 1,
+                      x: 0
+                    }} transition={{
+                      duration: 0.3,
+                      delay: index * 0.03
+                    }} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => window.location.href = `/player/${player.id}`}>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <RankBadge rank={player.rank} />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                                <PlayerAvatar name={player.name} size="sm" />
+                                <span className="font-semibold">{player.name}</span>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-center">{player.matches || 0}</TableCell>
+                            <TableCell className="text-center">{player.battingPoints}</TableCell>
+                            <TableCell className="text-center">{player.bowlingPoints}</TableCell>
+                            <TableCell className="text-center">{player.fieldingPoints}</TableCell>
+                            <TableCell className="text-center font-bold text-primary text-lg">
+                              {player.totalPoints}
+                            </TableCell>
+                          </motion.tr>) :
+                    // All-time overall rankings with weekly/monthly changes
                     leaderboardData.map((player, index) => <motion.tr key={player.id} initial={{
                       opacity: 0,
                       x: -20
