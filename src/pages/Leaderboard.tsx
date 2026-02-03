@@ -23,7 +23,7 @@ import { useTeamSettings } from '@/hooks/useTeamSettings';
 import { useScoringSettings } from '@/hooks/useScoringSettings';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SiteFooter } from '@/components/SiteFooter';
-import { exportPlayerStats, type PlayerExportData } from '@/lib/csv-export';
+import { exportPlayerStats, type PlayerExportData } from '@/lib/pdf-export';
 
 type SortKey = 'totalPoints' | 'battingPoints' | 'bowlingPoints' | 'fieldingPoints' | 'weeklyChange' | 'monthlyChange';
 const Leaderboard = () => {
@@ -107,7 +107,7 @@ const Leaderboard = () => {
         stumpings: s?.stumpings || 0,
       };
     });
-    exportPlayerStats(exportData);
+    exportPlayerStats(exportData, teamSettings?.team_name);
   };
   const getLeaderboardData = () => {
     // For category tabs, return empty - we use season-filtered rankings instead
