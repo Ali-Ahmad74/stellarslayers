@@ -20,6 +20,8 @@ import TeamProfile from "./pages/TeamProfile";
 import NotFound from "./pages/NotFound";
 import SeriesList from "./pages/SeriesList";
 import SeriesDetail from "./pages/SeriesDetail";
+import Scorer from "./pages/Scorer";
+import LiveMatch from "./pages/LiveMatch";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ const App = () => (
               <Route path="/team" element={<TeamProfile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/scorer/:id" element={<Scorer />} />
+              <Route path="/live/:id" element={<LiveMatch />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
