@@ -96,7 +96,7 @@ const Index = () => {
               <p className="text-destructive/70 text-sm mt-2">{error}</p>
             </div>
           </div> : <>
-            {/* Season Filter - Top Level */}
+            {/* Hero Section */}
             <motion.section initial={{
           opacity: 0,
           y: 20
@@ -105,6 +105,25 @@ const Index = () => {
           y: 0
         }} transition={{
           duration: 0.5
+        }} className="text-center mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3 font-display tracking-wide text-foreground">
+                🏆 Top Performers
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Track the best players across batting, bowling, and fielding categories
+              </p>
+            </motion.section>
+
+            {/* Season Filter - Under Top Performers heading */}
+            <motion.section initial={{
+          opacity: 0,
+          y: 20
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.5,
+          delay: 0.05
         }} className="mb-8">
               <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-card border border-border rounded-xl shadow-sm">
                 <span className="text-sm font-medium text-muted-foreground">Filter by Season:</span>
@@ -116,25 +135,6 @@ const Index = () => {
                   <Loader2 className="w-5 h-5 animate-spin text-primary" />
                 )}
               </div>
-            </motion.section>
-
-            {/* Hero Section */}
-            <motion.section initial={{
-          opacity: 0,
-          y: 20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          duration: 0.5,
-          delay: 0.05
-        }} className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3 font-display tracking-wide bg-transparent text-transparent">
-                <span className="text-gradient bg-transparent text-secondary">Top Performers</span>
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Track the best players across batting, bowling, and fielding categories
-              </p>
             </motion.section>
 
             {/* Top Performers Section */}
