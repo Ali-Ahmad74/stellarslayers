@@ -143,6 +143,16 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     }
   });
 
+  const [showWarnings, setShowWarnings] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem("bulkGridShowWarnings");
+      if (raw === null) return true;
+      return raw === "true";
+    } catch {
+      return true;
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem("bulkGridAutoScroll", String(autoScrollEnabled));
@@ -158,6 +168,14 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       // ignore
     }
   }, [showOnlySelected]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("bulkGridShowWarnings", String(showWarnings));
+    } catch {
+      // ignore
+    }
+  }, [showWarnings]);
 
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
@@ -591,6 +609,11 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
 
   const errorCount = validationIssues.filter((i) => i.severity === "error").length;
   const warningCount = validationIssues.filter((i) => i.severity === "warning").length;
+  
+  const displayedIssues = useMemo(() => {
+    if (showWarnings) return validationIssues;
+    return validationIssues.filter((i) => i.severity === "error");
+  }, [validationIssues, showWarnings]);
 
   const handleToggleAll = (include: boolean) => {
     setRows((prev) => {
@@ -993,29 +1016,30 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
           </CardContent>
         </Card>
 
-        {validationIssues.length > 0 && (
+        {(errorCount > 0 || (showWarnings && warningCount > 0)) && (
           <Collapsible defaultOpen={errorCount > 0}>
-            <Card className={errorCount > 0 ? "border-destructive" : "border-yellow-500"}>
+            <Card className={errorCount > 0 ? "border-destructive" : "border-accent"}>
               <CollapsibleTrigger className="w-full">
                 <CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     {errorCount > 0 ? (
                       <AlertCircle className="h-5 w-5 text-destructive" />
                     ) : (
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                      <AlertTriangle className="h-5 w-5 text-accent-foreground" />
                     )}
                     <CardTitle className="text-base font-display">
-                      Validation Issues ({validationIssues.length})
+                      Validation Issues ({displayedIssues.length})
                     </CardTitle>
-                    <div className="ml-auto flex gap-2 text-xs">
+                    <div className="ml-auto flex items-center gap-2 text-xs">
                       {errorCount > 0 && (
-                        <span className="px-2 py-1 rounded-full bg-destructive/10 text-destructive-foreground font-semibold">
+                        <span className="px-2 py-1 rounded-full bg-destructive/10 text-destructive font-semibold">
                           {errorCount} error{errorCount !== 1 ? "s" : ""}
                         </span>
                       )}
                       {warningCount > 0 && (
                         <span className="px-2 py-1 rounded-full bg-accent/10 text-accent-foreground font-semibold">
                           {warningCount} warning{warningCount !== 1 ? "s" : ""}
+                          {!showWarnings && " (hidden)"}
                         </span>
                       )}
                     </div>
@@ -1024,8 +1048,20 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-4">
+                  {warningCount > 0 && (
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                      <Switch
+                        id="show-warnings"
+                        checked={showWarnings}
+                        onCheckedChange={setShowWarnings}
+                      />
+                      <Label htmlFor="show-warnings" className="text-sm cursor-pointer">
+                        Show warnings
+                      </Label>
+                    </div>
+                  )}
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {validationIssues.map((issue, idx) => (
+                    {displayedIssues.map((issue, idx) => (
                       <div
                         key={idx}
                         className={`flex items-start gap-3 p-3 rounded-lg border ${
@@ -1037,7 +1073,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                         {issue.severity === "error" ? (
                           <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                          <AlertTriangle className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium">{issue.message}</div>
