@@ -50,11 +50,11 @@ function formatDateRange(start?: string | null, end?: string | null) {
 function formatClass(format: CardFormat) {
   switch (format) {
     case "story":
-      return "w-[420px] h-[760px]";
+      return "w-[420px] min-h-[760px]";
     case "wide":
-      return "w-[960px] h-[540px]";
+      return "w-[960px] min-h-[540px]";
     default:
-      return "w-[720px] h-[720px]";
+      return "w-[720px] min-h-[720px]";
   }
 }
 
