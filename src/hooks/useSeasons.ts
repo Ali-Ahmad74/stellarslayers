@@ -51,10 +51,16 @@ export function useSeasons() {
     };
   }, []);
 
+  // Find the active season
+  const activeSeason = seasons.find(s => s.is_active);
+  const activeSeasonId = activeSeason ? String(activeSeason.id) : null;
+
   return {
     seasons,
     loading,
     error,
     refetch: fetchSeasons,
+    activeSeason,
+    activeSeasonId,
   };
 }

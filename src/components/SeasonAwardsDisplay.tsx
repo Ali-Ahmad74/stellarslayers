@@ -6,7 +6,7 @@ import { Loader2, Trophy, Target, Shield, Star } from "lucide-react";
 import { useSeasonAwards, SeasonAward } from "@/hooks/useSeasonAwards";
 import { useSeasons } from "@/hooks/useSeasons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const awardConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   batsman_of_season: {
@@ -83,10 +83,23 @@ function AwardCard({ award }: { award: SeasonAward }) {
 }
 
 export function SeasonAwardsDisplay({ compact = false }: { compact?: boolean }) {
-  const { seasons, loading: seasonsLoading } = useSeasons();
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string>("all");
+  const { seasons, loading: seasonsLoading, activeSeasonId } = useSeasons();
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [seasonInitialized, setSeasonInitialized] = useState(false);
 
-  const seasonIdFilter = selectedSeasonId === "all" ? undefined : Number(selectedSeasonId);
+  // Set default season to active season when loaded
+  useEffect(() => {
+    if (!seasonsLoading && !seasonInitialized && activeSeasonId) {
+      setSelectedSeasonId(activeSeasonId);
+      setSeasonInitialized(true);
+    } else if (!seasonsLoading && !seasonInitialized && !activeSeasonId) {
+      setSelectedSeasonId('all');
+      setSeasonInitialized(true);
+    }
+  }, [seasonsLoading, activeSeasonId, seasonInitialized]);
+
+  const effectiveSeasonId = selectedSeasonId ?? 'all';
+  const seasonIdFilter = effectiveSeasonId === "all" ? undefined : Number(effectiveSeasonId);
   const { data: awards, isLoading, error } = useSeasonAwards(seasonIdFilter);
 
   if (isLoading || seasonsLoading) {
@@ -140,7 +153,7 @@ export function SeasonAwardsDisplay({ compact = false }: { compact?: boolean }) 
           Season Awards
         </CardTitle>
         {seasons && seasons.length > 0 && (
-          <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
+          <Select value={effectiveSeasonId} onValueChange={setSelectedSeasonId}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All seasons" />
             </SelectTrigger>
