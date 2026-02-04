@@ -4,16 +4,23 @@ import { Header } from '@/components/Header';
 import { TopPerformers } from '@/components/TopPerformers';
 import { RankingsTable } from '@/components/RankingsTable';
 import { RankingFilters } from '@/components/RankingFilters';
+import { RankingSeasonFilter } from '@/components/RankingSeasonFilter';
 import { HallOfFame } from '@/components/HallOfFame';
 import { SeasonAwardsDisplay } from '@/components/SeasonAwardsDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
+import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
+import { useBowlingRankingsBySeason } from '@/hooks/useBowlingRankingsBySeason';
+import { useFieldingRankingsBySeason } from '@/hooks/useFieldingRankingsBySeason';
+import { useOverallRankingsBySeason } from '@/hooks/useOverallRankingsBySeason';
 import { Loader2, Trophy, Target, Shield, Crown } from 'lucide-react';
 import { SiteFooter } from '@/components/SiteFooter';
 const Index = () => {
   const [minMatches, setMinMatches] = useState(0);
   const [minOvers, setMinOvers] = useState(0);
   const [activeTab, setActiveTab] = useState('batting');
+  const [selectedSeasonId, setSelectedSeasonId] = useState('all');
+  
   const {
     loading,
     error,
@@ -22,10 +29,30 @@ const Index = () => {
     getFieldingRankings,
     getOverallRankings
   } = usePlayerRankings();
-  const battingRankings = getBattingRankings(minMatches);
-  const bowlingRankings = getBowlingRankings(minMatches, minOvers);
-  const fieldingRankings = getFieldingRankings(minMatches);
-  const overallRankings = getOverallRankings(minMatches);
+
+  // Season-filtered rankings
+  const { rankings: battingBySeasonRankings, loading: battingSeasonLoading } = useBattingRankingsBySeason(selectedSeasonId);
+  const { rankings: bowlingBySeasonRankings, loading: bowlingSeasonLoading } = useBowlingRankingsBySeason(selectedSeasonId);
+  const { rankings: fieldingBySeasonRankings, loading: fieldingSeasonLoading } = useFieldingRankingsBySeason(selectedSeasonId);
+  const { rankings: overallBySeasonRankings, loading: overallSeasonLoading } = useOverallRankingsBySeason(selectedSeasonId);
+
+  // Use season-filtered rankings if a season is selected, otherwise use the hook's filtered rankings
+  const battingRankings = selectedSeasonId === 'all' ? getBattingRankings(minMatches) : battingBySeasonRankings;
+  const bowlingRankings = selectedSeasonId === 'all' ? getBowlingRankings(minMatches, minOvers) : bowlingBySeasonRankings;
+  const fieldingRankings = selectedSeasonId === 'all' ? getFieldingRankings(minMatches) : fieldingBySeasonRankings;
+  
+  // Map overall rankings to include 'rating' property for RankingsTable compatibility
+  const overallRankings = selectedSeasonId === 'all' 
+    ? getOverallRankings(minMatches) 
+    : overallBySeasonRankings.map(player => ({
+        ...player,
+        rating: player.totalPoints,
+        runs: player.stats?.total_runs,
+        wickets: player.stats?.wickets,
+        catches: player.stats?.catches,
+      }));
+  
+  const isSeasonLoading = selectedSeasonId !== 'all' && (battingSeasonLoading || bowlingSeasonLoading || fieldingSeasonLoading || overallSeasonLoading);
 
   // Get unfiltered rankings for top performers
   const topBatting = getBattingRankings(0);
@@ -141,8 +168,31 @@ const Index = () => {
               })}
                 </TabsList>
 
-                {/* Filters */}
-                <RankingFilters minMatches={minMatches} minOvers={minOvers} onMinMatchesChange={setMinMatches} onMinOversChange={setMinOvers} showOversFilter={activeTab === 'bowling'} />
+                {/* Season Filter and Match Filters */}
+                <div className="flex flex-wrap items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Season:</span>
+                    <RankingSeasonFilter 
+                      selectedSeason={selectedSeasonId} 
+                      onSeasonChange={setSelectedSeasonId} 
+                    />
+                  </div>
+                  {selectedSeasonId === 'all' && (
+                    <RankingFilters 
+                      minMatches={minMatches} 
+                      minOvers={minOvers} 
+                      onMinMatchesChange={setMinMatches} 
+                      onMinOversChange={setMinOvers} 
+                      showOversFilter={activeTab === 'bowling'} 
+                    />
+                  )}
+                </div>
+                
+                {isSeasonLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                )}
 
                 <TabsContent value="batting">
                   <RankingsTable title="Batting Rankings" icon="🏏" category="batting" players={battingRankings} />

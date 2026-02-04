@@ -21,7 +21,20 @@ export function PlayerAvatar({
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
   if (photoUrl) {
-    return <img src={photoUrl} alt={name} className={cn('rounded-full object-cover ring-2 ring-white/20', sizeClasses[size], className)} />;
+    return (
+      <img 
+        src={photoUrl} 
+        alt={name} 
+        loading="lazy"
+        decoding="async"
+        className={cn(
+          'rounded-full object-cover ring-2 ring-white/20 aspect-square',
+          sizeClasses[size], 
+          className
+        )} 
+        style={{ imageRendering: 'auto' }}
+      />
+    );
   }
   return <div className={cn("rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 font-bold text-white ring-2 ring-white/20 backdrop-blur-sm border-2 border-solid items-center justify-center flex flex-row gap-0 mx-0 my-0 px-0", sizeClasses[size], className)}>
       {getInitials(name)}
