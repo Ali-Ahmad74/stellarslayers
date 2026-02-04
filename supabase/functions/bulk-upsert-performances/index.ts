@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     if (!authHeader) return jsonResponse({ error: "Not authenticated" }, { status: 401 });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     if (!supabaseUrl || !supabaseAnonKey) {
       return jsonResponse({ error: "Server misconfigured" }, { status: 500 });
     }
