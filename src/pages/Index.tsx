@@ -54,10 +54,11 @@ const Index = () => {
   
   const isSeasonLoading = selectedSeasonId !== 'all' && (battingSeasonLoading || bowlingSeasonLoading || fieldingSeasonLoading || overallSeasonLoading);
 
-  // Get unfiltered rankings for top performers
-  const topBatting = getBattingRankings(0);
-  const topBowling = getBowlingRankings(0, 0);
-  const topFielding = getFieldingRankings(0);
+  // Top performers - use season-filtered if selected, otherwise unfiltered
+  const topBatting = selectedSeasonId === 'all' ? getBattingRankings(0) : battingBySeasonRankings;
+  const topBowling = selectedSeasonId === 'all' ? getBowlingRankings(0, 0) : bowlingBySeasonRankings;
+  const topFielding = selectedSeasonId === 'all' ? getFieldingRankings(0) : fieldingBySeasonRankings;
+
   const tabConfig = [{
     value: 'batting',
     label: 'Batting',
@@ -95,7 +96,7 @@ const Index = () => {
               <p className="text-destructive/70 text-sm mt-2">{error}</p>
             </div>
           </div> : <>
-            {/* Hero Section */}
+            {/* Season Filter - Top Level */}
             <motion.section initial={{
           opacity: 0,
           y: 20
@@ -104,6 +105,29 @@ const Index = () => {
           y: 0
         }} transition={{
           duration: 0.5
+        }} className="mb-8">
+              <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-card border border-border rounded-xl shadow-sm">
+                <span className="text-sm font-medium text-muted-foreground">Filter by Season:</span>
+                <RankingSeasonFilter 
+                  selectedSeason={selectedSeasonId} 
+                  onSeasonChange={setSelectedSeasonId} 
+                />
+                {isSeasonLoading && (
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                )}
+              </div>
+            </motion.section>
+
+            {/* Hero Section */}
+            <motion.section initial={{
+          opacity: 0,
+          y: 20
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.5,
+          delay: 0.05
         }} className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-3 font-display tracking-wide bg-transparent text-transparent">
                 <span className="text-gradient bg-transparent text-secondary">Top Performers</span>
@@ -168,16 +192,9 @@ const Index = () => {
               })}
                 </TabsList>
 
-                {/* Season Filter and Match Filters */}
-                <div className="flex flex-wrap items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Season:</span>
-                    <RankingSeasonFilter 
-                      selectedSeason={selectedSeasonId} 
-                      onSeasonChange={setSelectedSeasonId} 
-                    />
-                  </div>
-                  {selectedSeasonId === 'all' && (
+                {/* Match Filters - only show when "All Seasons" is selected */}
+                {selectedSeasonId === 'all' && (
+                  <div className="flex flex-wrap items-center gap-4 mb-4">
                     <RankingFilters 
                       minMatches={minMatches} 
                       minOvers={minOvers} 
@@ -185,12 +202,6 @@ const Index = () => {
                       onMinOversChange={setMinOvers} 
                       showOversFilter={activeTab === 'bowling'} 
                     />
-                  )}
-                </div>
-                
-                {isSeasonLoading && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
                 )}
 
