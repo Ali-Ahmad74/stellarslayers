@@ -82,9 +82,11 @@ function toInt(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+type BattingStatus = "dnb" | "not_out" | "out";
+
 type DraftRow = {
   include: boolean;
-  batting: { runs: string; balls: string; fours: string; sixes: string; out: boolean };
+  batting: { runs: string; balls: string; fours: string; sixes: string; status: BattingStatus };
   bowling: {
     balls: string;
     runs_conceded: string;
@@ -102,7 +104,7 @@ type DraftRow = {
 function emptyDraftRow(): DraftRow {
   return {
     include: false,
-    batting: { runs: "0", balls: "0", fours: "0", sixes: "0", out: false },
+    batting: { runs: "0", balls: "0", fours: "0", sixes: "0", status: "dnb" },
     bowling: {
       balls: "0",
       runs_conceded: "0",
@@ -449,7 +451,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       balls += toInt(r.batting.balls);
       fours += toInt(r.batting.fours);
       sixes += toInt(r.batting.sixes);
-      if (r.batting.out) outs += 1;
+      if (r.batting.status === "out") outs += 1;
 
       wickets += toInt(r.bowling.wickets);
       wides += toInt(r.bowling.wides);
@@ -630,7 +632,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
             balls: toInt(r.batting.balls),
             fours: toInt(r.batting.fours),
             sixes: toInt(r.batting.sixes),
-            out: r.batting.out,
+            out: r.batting.status === "out",
           },
           bowling: {
             balls: toInt(r.bowling.balls),
@@ -1131,7 +1133,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                 <div>Balls</div>
                 <div>4s</div>
                 <div>6s</div>
-                <div>Out</div>
+                <div>Status</div>
                 <div>Bowl balls</div>
                 <div>Runs conc</div>
                 <div>Wkts</div>
@@ -1192,17 +1194,24 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       }
                     />
                   ))}
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={r.batting.out}
-                      onCheckedChange={(checked) =>
-                        setRows((prev) => ({
-                          ...prev,
-                          [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, out: Boolean(checked) } },
-                        }))
-                      }
-                    />
-                  </div>
+                  <Select
+                    value={r.batting.status}
+                    onValueChange={(value: BattingStatus) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, status: value } },
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dnb">DNB</SelectItem>
+                      <SelectItem value="not_out">Not Out</SelectItem>
+                      <SelectItem value="out">Out</SelectItem>
+                    </SelectContent>
+                  </Select>
 
                   {/* Bowling */}
                   {(
