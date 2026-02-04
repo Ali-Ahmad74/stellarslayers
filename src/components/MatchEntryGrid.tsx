@@ -643,6 +643,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
             no_balls: toInt(r.bowling.no_balls),
             fours_conceded: toInt(r.bowling.fours_conceded),
             sixes_conceded: toInt(r.bowling.sixes_conceded),
+            dot_balls: toInt(r.bowling.dot_balls),
           },
           fielding: {
             catches: toInt(r.fielding.catches),
