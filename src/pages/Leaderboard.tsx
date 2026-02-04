@@ -331,9 +331,9 @@ const Leaderboard = () => {
                   <Link to={`/player/${topThree[1].id}`}>
                     <motion.div whileHover={{
                   scale: 1.05
-                }} className="bg-gradient-to-t from-gray-300 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-xl p-4 pt-8 w-28 md:w-36 mx-[2px]">
-                      <PlayerAvatar name={topThree[1].name} size="lg" />
-                      <p className="font-bold mt-2 text-sm truncate">{topThree[1].name}</p>
+                }} className="bg-gradient-to-t from-gray-300 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-xl p-4 pt-8 w-28 md:w-36 flex flex-col items-center">
+                      <PlayerAvatar name={topThree[1].name} photoUrl={topThree[1].photo_url} size="lg" className="mx-auto" />
+                      <p className="font-bold mt-2 text-sm truncate w-full text-center">{topThree[1].name}</p>
                       <p className="text-2xl font-display font-bold text-gray-600 dark:text-gray-300">
                         {getPodiumPoints(topThree[1])}
                       </p>
@@ -348,10 +348,10 @@ const Leaderboard = () => {
                   <Link to={`/player/${topThree[0].id}`}>
                     <motion.div whileHover={{
                   scale: 1.05
-                }} className="bg-gradient-to-t from-yellow-400 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-xl p-4 pt-10 w-32 md:w-44 my-0 px-[9px] mx-px">
+                }} className="bg-gradient-to-t from-yellow-400 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-xl p-4 pt-10 w-32 md:w-44 flex flex-col items-center">
                       <div className="text-4xl mb-2">👑</div>
-                      <PlayerAvatar name={topThree[0].name} size="xl" />
-                      <p className="font-bold mt-2 truncate">{topThree[0].name}</p>
+                      <PlayerAvatar name={topThree[0].name} photoUrl={topThree[0].photo_url} size="xl" className="mx-auto" />
+                      <p className="font-bold mt-2 truncate w-full text-center">{topThree[0].name}</p>
                       <p className="text-3xl font-display font-bold text-yellow-700 dark:text-yellow-200">
                         {getPodiumPoints(topThree[0])}
                       </p>
@@ -366,9 +366,9 @@ const Leaderboard = () => {
                   <Link to={`/player/${topThree[2].id}`}>
                     <motion.div whileHover={{
                   scale: 1.05
-                }} className="bg-gradient-to-t from-orange-300 to-orange-100 dark:from-orange-700 dark:to-orange-600 rounded-t-xl p-4 pt-6 w-24 md:w-32 mx-0 my-0">
-                      <PlayerAvatar name={topThree[2].name} size="md" />
-                      <p className="font-bold mt-2 text-sm truncate">{topThree[2].name}</p>
+                }} className="bg-gradient-to-t from-orange-300 to-orange-100 dark:from-orange-700 dark:to-orange-600 rounded-t-xl p-4 pt-6 w-24 md:w-32 flex flex-col items-center">
+                      <PlayerAvatar name={topThree[2].name} photoUrl={topThree[2].photo_url} size="md" className="mx-auto" />
+                      <p className="font-bold mt-2 text-sm truncate w-full text-center">{topThree[2].name}</p>
                       <p className="text-xl font-display font-bold text-orange-700 dark:text-orange-200">
                         {getPodiumPoints(topThree[2])}
                       </p>
