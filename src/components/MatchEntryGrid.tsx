@@ -82,7 +82,7 @@ function toInt(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type BattingStatus = "dnb" | "not_out" | "out";
+type BattingStatus = "dnb" | "not_out" | "out" | "run_out";
 
 type DraftRow = {
   include: boolean;
@@ -451,7 +451,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       balls += toInt(r.batting.balls);
       fours += toInt(r.batting.fours);
       sixes += toInt(r.batting.sixes);
-      if (r.batting.status === "out") outs += 1;
+      if (r.batting.status === "out" || r.batting.status === "run_out") outs += 1;
 
       wickets += toInt(r.bowling.wickets);
       wides += toInt(r.bowling.wides);
@@ -632,7 +632,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
             balls: toInt(r.batting.balls),
             fours: toInt(r.batting.fours),
             sixes: toInt(r.batting.sixes),
-            out: r.batting.status === "out",
+            out: r.batting.status === "out" || r.batting.status === "run_out",
           },
           bowling: {
             balls: toInt(r.bowling.balls),
@@ -1207,6 +1207,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       <SelectItem value="dnb">DNB</SelectItem>
                       <SelectItem value="not_out">Not Out</SelectItem>
                       <SelectItem value="out">Out</SelectItem>
+                      <SelectItem value="run_out">Run Out</SelectItem>
                     </SelectContent>
                   </Select>
 
