@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { TopPerformers } from '@/components/TopPerformers';
@@ -13,13 +13,30 @@ import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
 import { useBowlingRankingsBySeason } from '@/hooks/useBowlingRankingsBySeason';
 import { useFieldingRankingsBySeason } from '@/hooks/useFieldingRankingsBySeason';
 import { useOverallRankingsBySeason } from '@/hooks/useOverallRankingsBySeason';
+import { useSeasons } from '@/hooks/useSeasons';
 import { Loader2, Trophy, Target, Shield, Crown } from 'lucide-react';
 import { SiteFooter } from '@/components/SiteFooter';
 const Index = () => {
   const [minMatches, setMinMatches] = useState(0);
   const [minOvers, setMinOvers] = useState(0);
   const [activeTab, setActiveTab] = useState('batting');
-  const [selectedSeasonId, setSelectedSeasonId] = useState('all');
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [seasonInitialized, setSeasonInitialized] = useState(false);
+  
+  const { activeSeasonId, loading: seasonsLoading } = useSeasons();
+  
+  // Set default season to active season when loaded
+  useEffect(() => {
+    if (!seasonsLoading && !seasonInitialized && activeSeasonId) {
+      setSelectedSeasonId(activeSeasonId);
+      setSeasonInitialized(true);
+    } else if (!seasonsLoading && !seasonInitialized && !activeSeasonId) {
+      setSelectedSeasonId('all');
+      setSeasonInitialized(true);
+    }
+  }, [seasonsLoading, activeSeasonId, seasonInitialized]);
+  
+  const effectiveSeasonId = selectedSeasonId ?? 'all';
   
   const {
     loading,
@@ -31,18 +48,18 @@ const Index = () => {
   } = usePlayerRankings();
 
   // Season-filtered rankings
-  const { rankings: battingBySeasonRankings, loading: battingSeasonLoading } = useBattingRankingsBySeason(selectedSeasonId);
-  const { rankings: bowlingBySeasonRankings, loading: bowlingSeasonLoading } = useBowlingRankingsBySeason(selectedSeasonId);
-  const { rankings: fieldingBySeasonRankings, loading: fieldingSeasonLoading } = useFieldingRankingsBySeason(selectedSeasonId);
-  const { rankings: overallBySeasonRankings, loading: overallSeasonLoading } = useOverallRankingsBySeason(selectedSeasonId);
+  const { rankings: battingBySeasonRankings, loading: battingSeasonLoading } = useBattingRankingsBySeason(effectiveSeasonId);
+  const { rankings: bowlingBySeasonRankings, loading: bowlingSeasonLoading } = useBowlingRankingsBySeason(effectiveSeasonId);
+  const { rankings: fieldingBySeasonRankings, loading: fieldingSeasonLoading } = useFieldingRankingsBySeason(effectiveSeasonId);
+  const { rankings: overallBySeasonRankings, loading: overallSeasonLoading } = useOverallRankingsBySeason(effectiveSeasonId);
 
   // Use season-filtered rankings if a season is selected, otherwise use the hook's filtered rankings
-  const battingRankings = selectedSeasonId === 'all' ? getBattingRankings(minMatches) : battingBySeasonRankings;
-  const bowlingRankings = selectedSeasonId === 'all' ? getBowlingRankings(minMatches, minOvers) : bowlingBySeasonRankings;
-  const fieldingRankings = selectedSeasonId === 'all' ? getFieldingRankings(minMatches) : fieldingBySeasonRankings;
+  const battingRankings = effectiveSeasonId === 'all' ? getBattingRankings(minMatches) : battingBySeasonRankings;
+  const bowlingRankings = effectiveSeasonId === 'all' ? getBowlingRankings(minMatches, minOvers) : bowlingBySeasonRankings;
+  const fieldingRankings = effectiveSeasonId === 'all' ? getFieldingRankings(minMatches) : fieldingBySeasonRankings;
   
   // Map overall rankings to include 'rating' property for RankingsTable compatibility
-  const overallRankings = selectedSeasonId === 'all' 
+  const overallRankings = effectiveSeasonId === 'all' 
     ? getOverallRankings(minMatches) 
     : overallBySeasonRankings.map(player => ({
         ...player,
@@ -52,12 +69,12 @@ const Index = () => {
         catches: player.stats?.catches,
       }));
   
-  const isSeasonLoading = selectedSeasonId !== 'all' && (battingSeasonLoading || bowlingSeasonLoading || fieldingSeasonLoading || overallSeasonLoading);
+  const isSeasonLoading = effectiveSeasonId !== 'all' && (battingSeasonLoading || bowlingSeasonLoading || fieldingSeasonLoading || overallSeasonLoading);
 
   // Top performers - use season-filtered if selected, otherwise unfiltered
-  const topBatting = selectedSeasonId === 'all' ? getBattingRankings(0) : battingBySeasonRankings;
-  const topBowling = selectedSeasonId === 'all' ? getBowlingRankings(0, 0) : bowlingBySeasonRankings;
-  const topFielding = selectedSeasonId === 'all' ? getFieldingRankings(0) : fieldingBySeasonRankings;
+  const topBatting = effectiveSeasonId === 'all' ? getBattingRankings(0) : battingBySeasonRankings;
+  const topBowling = effectiveSeasonId === 'all' ? getBowlingRankings(0, 0) : bowlingBySeasonRankings;
+  const topFielding = effectiveSeasonId === 'all' ? getFieldingRankings(0) : fieldingBySeasonRankings;
 
   const tabConfig = [{
     value: 'batting',
@@ -128,7 +145,7 @@ const Index = () => {
               <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-card border border-border rounded-xl shadow-sm">
                 <span className="text-sm font-medium text-muted-foreground">Filter by Season:</span>
                 <RankingSeasonFilter 
-                  selectedSeason={selectedSeasonId} 
+                  selectedSeason={effectiveSeasonId} 
                   onSeasonChange={setSelectedSeasonId} 
                 />
                 {isSeasonLoading && (
