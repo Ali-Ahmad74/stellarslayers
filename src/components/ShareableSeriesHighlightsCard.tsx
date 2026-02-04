@@ -50,11 +50,11 @@ function formatDateRange(start?: string | null, end?: string | null) {
 function formatClass(format: CardFormat) {
   switch (format) {
     case "story":
-      return "w-[420px] min-h-[760px]";
+      return "w-[420px]";
     case "wide":
-      return "w-[960px] min-h-[540px]";
+      return "w-[960px]";
     default:
-      return "w-[720px] min-h-[720px]";
+      return "w-[720px]";
   }
 }
 
@@ -110,7 +110,7 @@ export const ShareableSeriesHighlightsCard = forwardRef<HTMLDivElement, Shareabl
     const watermarkPos = watermarkPosition || "bottom-right";
 
     return (
-      <div ref={ref} className={cn("relative rounded-2xl overflow-hidden border bg-background text-foreground p-6", formatClass(format))}>
+      <div ref={ref} className={cn("relative rounded-2xl overflow-visible border bg-background text-foreground p-6 pb-10", formatClass(format))}>
         <div className="absolute inset-0 opacity-[0.06]" aria-hidden>
           <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-primary" />
           <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-primary" />
