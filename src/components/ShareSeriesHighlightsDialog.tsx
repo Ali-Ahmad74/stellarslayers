@@ -109,10 +109,25 @@ export function ShareSeriesHighlightsDialog({
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={downloading}>
+              <Button 
+                variant="outline" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onOpenChange(false);
+                }} 
+                disabled={downloading}
+                type="button"
+              >
                 Close
               </Button>
-              <Button onClick={handleDownload} disabled={downloading}>
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDownload();
+                }} 
+                disabled={downloading}
+                type="button"
+              >
                 {downloading ? "Preparing…" : "Download PNG"}
               </Button>
             </div>

@@ -387,7 +387,16 @@ export default function SeriesDetail() {
             </Button>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShareOpen(true)}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2" 
+              onClick={(e) => {
+                e.preventDefault();
+                setShareOpen(true);
+              }}
+              type="button"
+            >
               <Share2 className="w-4 h-4" />
               Share highlights
             </Button>
