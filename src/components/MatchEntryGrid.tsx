@@ -655,16 +655,12 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       }),
     };
 
-    const parsed = payloadSchema.safeParse(payload);
-    if (!parsed.success) {
-      toast.error("Please fix invalid numbers in the grid");
-      return;
-    }
+    // Skip validation - save as-is
 
     setSaving(true);
     try {
       const { error } = await supabase.functions.invoke("bulk-upsert-performances", {
-        body: parsed.data,
+        body: payload,
       });
       if (error) throw error;
       toast.success("Saved match performances");
