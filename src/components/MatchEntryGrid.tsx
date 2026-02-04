@@ -15,7 +15,18 @@ import { ChevronLeft, ChevronRight, AlertTriangle, AlertCircle, RotateCcw, Rotat
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
-
+import { useBulkEntrySettings } from "@/hooks/useBulkEntrySettings";
+import { BulkEntrySettingsDialog } from "@/components/BulkEntrySettingsDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 type Player = { id: number; name: string };
 type Match = { id: number; match_date: string; venue: string | null };
 
@@ -122,60 +133,18 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [isPasting, setIsPasting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem("bulkGridAutoScroll");
-      if (raw === null) return true;
-      return raw === "true";
-    } catch {
-      return true;
-    }
-  });
-
-  const [showOnlySelected, setShowOnlySelected] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem("bulkGridShowOnlySelected");
-      if (raw === null) return false;
-      return raw === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  const [showWarnings, setShowWarnings] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem("bulkGridShowWarnings");
-      if (raw === null) return true;
-      return raw === "true";
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("bulkGridAutoScroll", String(autoScrollEnabled));
-    } catch {
-      // ignore
-    }
-  }, [autoScrollEnabled]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("bulkGridShowOnlySelected", String(showOnlySelected));
-    } catch {
-      // ignore
-    }
-  }, [showOnlySelected]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("bulkGridShowWarnings", String(showWarnings));
-    } catch {
-      // ignore
-    }
-  }, [showWarnings]);
+  // Centralized settings
+  const { settings, updateSettings } = useBulkEntrySettings();
+  const { 
+    autoScrollEnabled, 
+    showOnlySelected, 
+    showWarnings, 
+    defaultSelectAll,
+    confirmBeforeSave,
+    clearAfterSave 
+  } = settings;
 
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
@@ -323,9 +292,13 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
 
   const initialRows = useMemo(() => {
     const init: Record<number, DraftRow> = {};
-    for (const p of players) init[p.id] = emptyDraftRow();
+    for (const p of players) {
+      const row = emptyDraftRow();
+      row.include = defaultSelectAll;
+      init[p.id] = row;
+    }
     return init;
-  }, [players]);
+  }, [players, defaultSelectAll]);
 
   const {
     state: rows,
@@ -623,7 +596,17 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
     });
   };
 
-  const handleSave = async () => {
+  const clearGrid = () => {
+    setRows((prev) => {
+      const next: Record<number, DraftRow> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        next[Number(k)] = { ...emptyDraftRow(), include: v.include };
+      }
+      return next;
+    });
+  };
+
+  const performSave = async () => {
     const mId = Number(matchId);
     if (!mId) {
       toast.error("Select a match first");
@@ -682,10 +665,35 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       });
       if (error) throw error;
       toast.success("Saved match performances");
+      
+      // Clear grid after successful save if setting is enabled
+      if (clearAfterSave) {
+        clearGrid();
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSave = () => {
+    const mId = Number(matchId);
+    if (!mId) {
+      toast.error("Select a match first");
+      return;
+    }
+
+    const includedPlayers = players.filter((p) => rows[p.id]?.include);
+    if (includedPlayers.length === 0) {
+      toast.error("Select at least 1 player");
+      return;
+    }
+
+    if (confirmBeforeSave) {
+      setShowConfirmDialog(true);
+    } else {
+      performSave();
     }
   };
 
@@ -907,12 +915,13 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
 
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground">Show only selected</Label>
-                <Switch checked={showOnlySelected} onCheckedChange={setShowOnlySelected} />
+                <Switch checked={showOnlySelected} onCheckedChange={(v) => updateSettings({ showOnlySelected: v })} />
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground">Auto-scroll</Label>
-                <Switch checked={autoScrollEnabled} onCheckedChange={setAutoScrollEnabled} />
+                <Switch checked={autoScrollEnabled} onCheckedChange={(v) => updateSettings({ autoScrollEnabled: v })} />
               </div>
+              <BulkEntrySettingsDialog />
               <Button onClick={handleSave} disabled={saving || selectedCount === 0 || !matchId}>
                 {saving ? "Saving…" : "Save all"}
               </Button>
@@ -1050,11 +1059,11 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                 <CardContent className="pt-0 pb-4">
                   {warningCount > 0 && (
                     <div className="flex items-center gap-2 mb-3 pb-3 border-b">
-                      <Switch
-                        id="show-warnings"
-                        checked={showWarnings}
-                        onCheckedChange={setShowWarnings}
-                      />
+                    <Switch
+                      id="show-warnings"
+                      checked={showWarnings}
+                      onCheckedChange={(v) => updateSettings({ showWarnings: v })}
+                    />
                       <Label htmlFor="show-warnings" className="text-sm cursor-pointer">
                         Show warnings
                       </Label>
@@ -1261,6 +1270,24 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
         </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Save</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to save performance data for {selectedCount} player(s). This will update the match statistics in the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowConfirmDialog(false); performSave(); }}>
+              Save Performances
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
