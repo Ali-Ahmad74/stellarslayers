@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, Award } from "lucide-react";
 import { usePlayerOfTheMatch, POTMLeader } from "@/hooks/usePlayerOfTheMatch";
 
@@ -45,8 +44,12 @@ function LeaderCard({ leader, rank }: { leader: POTMLeader; rank: number }) {
   );
 }
 
-export function HallOfFame() {
-  const { data, isLoading, error } = usePlayerOfTheMatch();
+interface HallOfFameProps {
+  seasonId?: string;
+}
+
+export function HallOfFame({ seasonId }: HallOfFameProps) {
+  const { data, isLoading, error } = usePlayerOfTheMatch(seasonId);
 
   if (isLoading) {
     return (
