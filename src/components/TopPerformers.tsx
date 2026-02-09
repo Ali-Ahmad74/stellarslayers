@@ -49,6 +49,7 @@ export function TopPerformers({
                 <Link 
                   key={player.id} 
                   to={`/player/${player.id}`} 
+                  state={{ from: '/', fromLabel: 'Back to Home' }}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors group"
                 >
                   <div className="flex items-center gap-3">

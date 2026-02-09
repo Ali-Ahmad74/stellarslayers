@@ -62,7 +62,7 @@ export function PlayerOfSeriesCard({ seriesId }: PlayerOfSeriesCardProps) {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <Link to={`/player/${winner.player_id}`} className="font-semibold text-lg hover:underline">
+            <Link to={`/player/${winner.player_id}`} state={{ from: '/series', fromLabel: 'Back to Series' }} className="font-semibold text-lg hover:underline">
               {player?.name ?? "Unknown"}
             </Link>
             <p className="text-sm text-muted-foreground">{player?.role ?? ""}</p>
@@ -114,6 +114,7 @@ export function PlayerOfSeriesCard({ seriesId }: PlayerOfSeriesCardProps) {
                     )}
                     <Link
                       to={`/player/${entry.player_id}`}
+                      state={{ from: '/series', fromLabel: 'Back to Series' }}
                       className="text-sm font-medium truncate hover:underline"
                     >
                       {entry.player?.name ?? "Unknown"}

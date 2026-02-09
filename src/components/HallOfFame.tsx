@@ -9,7 +9,7 @@ function LeaderCard({ leader, rank }: { leader: POTMLeader; rank: number }) {
   const bgColor = rankColors[rank - 1] ?? "from-muted to-muted";
 
   return (
-    <Link to={`/player/${leader.player_id}`}>
+    <Link to={`/player/${leader.player_id}`} state={{ from: '/', fromLabel: 'Back to Home' }}>
       <motion.div
         whileHover={{ y: -4, scale: 1.02 }}
         className="relative overflow-hidden rounded-xl border bg-card shadow-lg hover:shadow-xl transition-all cursor-pointer"

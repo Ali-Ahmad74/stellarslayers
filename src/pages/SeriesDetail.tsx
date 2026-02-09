@@ -122,7 +122,7 @@ function PerformerCard({
                       <div className="h-8 w-8 rounded-full bg-muted border border-border" aria-hidden />
                     )}
                     <div className="min-w-0">
-                      <Link to={`/player/${r.player_id}`} className="font-medium truncate hover:underline">
+                      <Link to={`/player/${r.player_id}`} state={{ from: `/series/${r.player_id}`, fromLabel: 'Back to Series' }} className="font-medium truncate hover:underline">
                         {p?.name ?? "Unknown"}
                       </Link>
                       <div className="text-xs text-muted-foreground truncate">{p?.role ?? ""}</div>

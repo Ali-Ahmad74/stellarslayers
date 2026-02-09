@@ -107,6 +107,7 @@ export function RankingsTable({ title, icon, category, players }: RankingsTableP
                       <TableCell>
                         <Link
                           to={`/player/${player.id}`}
+                          state={{ from: '/', fromLabel: 'Back to Rankings' }}
                           className="flex items-center gap-3 hover:text-primary transition-colors"
                         >
                           <PlayerAvatar name={player.name} size="sm" />
