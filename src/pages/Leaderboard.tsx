@@ -342,7 +342,7 @@ const Leaderboard = () => {
               <div className="flex justify-center items-end gap-4 md:gap-8">
                 {/* 2nd Place */}
                 <div className="text-center">
-                  <Link to={`/player/${topThree[1].id}`}>
+                  <Link to={`/player/${topThree[1].id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }}>
                     <motion.div whileHover={{
                   scale: 1.05
                 }} className="bg-gradient-to-t from-gray-300 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-xl p-4 pt-8 w-28 md:w-36 flex flex-col items-center">
@@ -359,7 +359,7 @@ const Leaderboard = () => {
 
                 {/* 1st Place */}
                 <div className="text-center">
-                  <Link to={`/player/${topThree[0].id}`}>
+                  <Link to={`/player/${topThree[0].id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }}>
                     <motion.div whileHover={{
                   scale: 1.05
                 }} className="bg-gradient-to-t from-yellow-400 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-xl p-4 pt-10 w-32 md:w-44 flex flex-col items-center">
@@ -377,7 +377,7 @@ const Leaderboard = () => {
 
                 {/* 3rd Place */}
                 <div className="text-center">
-                  <Link to={`/player/${topThree[2].id}`}>
+                  <Link to={`/player/${topThree[2].id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }}>
                     <motion.div whileHover={{
                   scale: 1.05
                 }} className="bg-gradient-to-t from-orange-300 to-orange-100 dark:from-orange-700 dark:to-orange-600 rounded-t-xl p-4 pt-6 w-24 md:w-32 flex flex-col items-center">
@@ -547,7 +547,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
+                              <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -578,7 +578,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
+                              <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -608,7 +608,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
+                              <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -640,7 +640,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                              <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
@@ -670,7 +670,7 @@ const Leaderboard = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/player/${player.id}`} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
+                              <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
                                 <PlayerAvatar name={player.name} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>

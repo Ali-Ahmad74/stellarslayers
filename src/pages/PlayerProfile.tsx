@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2, Calendar, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -35,6 +35,13 @@ interface Player {
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determine back navigation based on where the user came from
+  const fromState = (location.state as { from?: string; fromLabel?: string }) || {};
+  const backTo = fromState.from || '/';
+  const backLabel = fromState.fromLabel || 'Back to Rankings';
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerLoading, setPlayerLoading] = useState(true);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
@@ -246,12 +253,10 @@ const PlayerProfile = () => {
       <main className="container py-8">
         {/* Back Button + Season Filter */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Link to="/">
-            <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => navigate(backTo)}>
               <ArrowLeft className="w-4 h-4" />
-              Back to Rankings
-            </Button>
-          </Link>
+              {backLabel}
+          </Button>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />

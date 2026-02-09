@@ -73,7 +73,7 @@ const Players = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <Link to={`/player/${player.id}`}>
+                <Link to={`/player/${player.id}`} state={{ from: '/players', fromLabel: 'Back to Players' }}>
                   <Card variant="elevated" className="overflow-hidden group cursor-pointer">
                     <div className="gradient-header p-6 text-white text-center">
                       <PlayerAvatar 

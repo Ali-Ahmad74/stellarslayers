@@ -39,7 +39,7 @@ function AwardCard({ award }: { award: SeasonAward }) {
   };
 
   return (
-    <Link to={`/player/${award.player_id}`}>
+    <Link to={`/player/${award.player_id}`} state={{ from: '/', fromLabel: 'Back to Home' }}>
       <motion.div
         whileHover={{ y: -4 }}
         className="relative overflow-hidden rounded-xl border bg-card shadow-lg hover:shadow-xl transition-all cursor-pointer group"
