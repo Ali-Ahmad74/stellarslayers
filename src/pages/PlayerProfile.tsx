@@ -376,7 +376,7 @@ const PlayerProfile = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-muted/50 rounded-xl">
                       <p className="text-3xl font-bold font-display text-primary">{stats?.total_runs || 0}</p>
                       <p className="text-sm text-muted-foreground">Runs</p>
@@ -404,6 +404,16 @@ const PlayerProfile = () => {
                     <div className="text-center p-4 bg-muted/50 rounded-xl">
                       <p className="text-3xl font-bold font-display text-primary">{stats?.times_out || 0}</p>
                       <p className="text-sm text-muted-foreground">Dismissals</p>
+                    </div>
+                    <div className="text-center p-4 bg-muted/50 rounded-xl">
+                      <p className="text-3xl font-bold font-display text-emerald-600 dark:text-emerald-400">
+                        {stats ? (stats.matches - stats.times_out) : 0}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Not Outs</p>
+                    </div>
+                    <div className="text-center p-4 bg-muted/50 rounded-xl">
+                      <p className="text-3xl font-bold font-display text-amber-600 dark:text-amber-400">{stats?.runouts || 0}</p>
+                      <p className="text-sm text-muted-foreground">Run Outs</p>
                     </div>
                   </div>
                   {/* Milestones */}
