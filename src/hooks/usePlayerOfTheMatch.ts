@@ -19,17 +19,39 @@ export interface POTMLeader {
   award_count: number;
 }
 
-export function usePlayerOfTheMatch() {
+export function usePlayerOfTheMatch(seasonId?: string) {
   return useQuery({
-    queryKey: ["player-of-the-match-hall-of-fame"],
+    queryKey: ["player-of-the-match-hall-of-fame", seasonId ?? "all"],
     queryFn: async () => {
-      // Fetch all matches with POTM awards
-      const { data: matches, error } = await supabase
+      // If a specific season is selected, we need to find matches that belong to that season
+      // Matches don't have a direct season_id, but batting_inputs do
+      // So we find match_ids for the given season via batting_inputs
+      let matchIdFilter: number[] | null = null;
+
+      if (seasonId && seasonId !== "all") {
+        const { data: seasonMatches } = await supabase
+          .from("batting_inputs")
+          .select("match_id")
+          .eq("season_id", Number(seasonId));
+
+        matchIdFilter = [...new Set((seasonMatches ?? []).map((r) => r.match_id))];
+        if (matchIdFilter.length === 0) {
+          return { awards: [], leaders: [] };
+        }
+      }
+
+      // Fetch matches with POTM awards
+      let query = supabase
         .from("matches")
         .select("id, match_date, opponent_name, result, player_of_the_match_id")
         .not("player_of_the_match_id", "is", null)
         .order("match_date", { ascending: false });
 
+      if (matchIdFilter) {
+        query = query.in("id", matchIdFilter);
+      }
+
+      const { data: matches, error } = await query;
       if (error) throw error;
 
       const playerIds = [...new Set((matches ?? []).map((m) => m.player_of_the_match_id).filter(Boolean) as number[])];
@@ -47,7 +69,6 @@ export function usePlayerOfTheMatch() {
 
       const playersMap = new Map((players ?? []).map((p) => [p.id, p]));
 
-      // Build awards list
       const awards: POTMAward[] = (matches ?? []).map((m) => {
         const p = playersMap.get(m.player_of_the_match_id!);
         return {
@@ -61,7 +82,6 @@ export function usePlayerOfTheMatch() {
         };
       });
 
-      // Count awards per player
       const countMap = new Map<number, number>();
       for (const a of awards) {
         countMap.set(a.player_id, (countMap.get(a.player_id) ?? 0) + 1);

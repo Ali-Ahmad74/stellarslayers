@@ -183,7 +183,7 @@ const Index = () => {
           duration: 0.5,
           delay: 0.15
         }} className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <HallOfFame />
+              <HallOfFame seasonId={effectiveSeasonId} />
               <SeasonAwardsDisplay compact />
             </motion.section>
 
