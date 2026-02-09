@@ -145,9 +145,13 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
     return <p className="text-center text-muted-foreground py-4">No detailed scorecard available for this match</p>;
   }
 
+  // Separate batters who actually batted vs DNB (0 runs, 0 balls, not out)
+  const actualBatters = batting.filter(b => b.balls > 0 || b.runs > 0 || b.out);
+  const dnbPlayers = batting.filter(b => b.balls === 0 && b.runs === 0 && !b.out);
+
   return (
     <div className="p-4 space-y-6">
-      {batting.length > 0 && (
+      {actualBatters.length > 0 && (
         <div>
           <h4 className="font-semibold mb-3 flex items-center gap-2">🏏 Batting Scorecard</h4>
           <div className="overflow-x-auto">
@@ -164,7 +168,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {batting.map((b) => (
+                {actualBatters.map((b) => (
                   <TableRow key={b.player_id}>
                     <TableCell className="font-medium">{b.player_name}</TableCell>
                     <TableCell className="text-center font-bold">{b.runs}</TableCell>
@@ -180,6 +184,14 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
               </TableBody>
             </Table>
           </div>
+          {dnbPlayers.length > 0 && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Did Not Bat: </span>
+                {dnbPlayers.map(p => p.player_name).join(", ")}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
