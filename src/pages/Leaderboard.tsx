@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Trophy, TrendingUp, TrendingDown, Minus, RefreshCw, Share2 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { RankingSeasonFilter } from '@/components/RankingSeasonFilter';
 import { ExportButton } from '@/components/ExportButton';
 import { usePlayerRankings } from '@/hooks/usePlayerRankings';
+import { useSeasons } from '@/hooks/useSeasons';
 import { usePointHistory } from '@/hooks/usePointHistory';
 import { useBowlingRankingsBySeason } from '@/hooks/useBowlingRankingsBySeason';
 import { useBattingRankingsBySeason } from '@/hooks/useBattingRankingsBySeason';
@@ -47,12 +48,25 @@ const Leaderboard = () => {
   const [activeTab, setActiveTab] = useState('overall');
   const [isRecording, setIsRecording] = useState(false);
   const [sharePlayerId, setSharePlayerId] = useState<number | null>(null);
+  const [seasonInitialized, setSeasonInitialized] = useState(false);
+  const { activeSeasonId, loading: seasonsLoading } = useSeasons();
 
   // Season filter states for each category
   const [overallSeasonId, setOverallSeasonId] = useState<string>('all');
   const [battingSeasonId, setBattingSeasonId] = useState<string>('all');
   const [bowlingSeasonId, setBowlingSeasonId] = useState<string>('all');
   const [fieldingSeasonId, setFieldingSeasonId] = useState<string>('all');
+
+  // Default all season filters to active season
+  useEffect(() => {
+    if (!seasonsLoading && !seasonInitialized && activeSeasonId) {
+      setOverallSeasonId(activeSeasonId);
+      setBattingSeasonId(activeSeasonId);
+      setBowlingSeasonId(activeSeasonId);
+      setFieldingSeasonId(activeSeasonId);
+      setSeasonInitialized(true);
+    }
+  }, [seasonsLoading, activeSeasonId, seasonInitialized]);
 
   // Rankings with season filters
   const {
