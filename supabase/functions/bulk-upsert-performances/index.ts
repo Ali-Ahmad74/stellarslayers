@@ -17,6 +17,7 @@ const rowSchema = z.object({
       fours: int0,
       sixes: int0,
       out: z.boolean(),
+      dismissal_type: z.string().nullable().optional(),
     })
     .optional(),
   bowling: z
@@ -143,6 +144,7 @@ Deno.serve(async (req) => {
               fours: row.batting.fours,
               sixes: row.batting.sixes,
               out: row.batting.out,
+              dismissal_type: row.batting.dismissal_type ?? null,
             })
             .eq("id", existingId);
           if (res.error) errors.push(`batting p${row.player_id}: ${res.error.message}`);
@@ -155,6 +157,7 @@ Deno.serve(async (req) => {
             fours: row.batting.fours,
             sixes: row.batting.sixes,
             out: row.batting.out,
+            dismissal_type: row.batting.dismissal_type ?? null,
           });
           if (res.error) errors.push(`batting p${row.player_id}: ${res.error.message}`);
         }

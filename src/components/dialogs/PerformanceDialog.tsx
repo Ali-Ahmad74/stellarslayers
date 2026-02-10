@@ -37,6 +37,7 @@ export interface PerformanceFormData {
     fours: number;
     sixes: number;
     out: boolean;
+    dismissal_type: string | null;
   };
   bowling: {
     balls: number;
@@ -66,6 +67,7 @@ export function PerformanceDialog({ open, onOpenChange, onSave, players, matches
   const [fours, setFours] = useState(0);
   const [sixes, setSixes] = useState(0);
   const [out, setOut] = useState(false);
+  const [dismissalType, setDismissalType] = useState<string | null>(null);
   
   // Bowling
   const [bowlingBalls, setBowlingBalls] = useState(0);
@@ -93,6 +95,7 @@ export function PerformanceDialog({ open, onOpenChange, onSave, players, matches
       setFours(0);
       setSixes(0);
       setOut(false);
+      setDismissalType(null);
       setBowlingBalls(0);
       setRunsConceded(0);
       setWickets(0);
@@ -115,7 +118,7 @@ export function PerformanceDialog({ open, onOpenChange, onSave, players, matches
     onSave({
       match_id: parseInt(matchId),
       player_id: parseInt(playerId),
-      batting: { runs, balls, fours, sixes, out },
+      batting: { runs, balls, fours, sixes, out, dismissal_type: out ? dismissalType : null },
       bowling: { 
         balls: bowlingBalls, 
         runs_conceded: runsConceded, 
@@ -247,10 +250,33 @@ export function PerformanceDialog({ open, onOpenChange, onSave, players, matches
                   <Checkbox
                     id="out"
                     checked={out}
-                    onCheckedChange={(checked) => setOut(checked as boolean)}
+                    onCheckedChange={(checked) => {
+                      setOut(checked as boolean);
+                      if (!checked) setDismissalType(null);
+                    }}
                   />
                   <Label htmlFor="out" className="cursor-pointer">Out</Label>
                 </div>
+                {out && (
+                  <div className="space-y-2">
+                    <Label>Dismissal Type</Label>
+                    <Select value={dismissalType || ''} onValueChange={setDismissalType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="How out?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="caught">Caught</SelectItem>
+                        <SelectItem value="bowled">Bowled</SelectItem>
+                        <SelectItem value="run_out">Run Out</SelectItem>
+                        <SelectItem value="stumped">Stumped</SelectItem>
+                        <SelectItem value="lbw">LBW</SelectItem>
+                        <SelectItem value="hit_wicket">Hit Wicket</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="bowling" className="space-y-4 pt-4">

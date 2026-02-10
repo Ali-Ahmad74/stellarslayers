@@ -74,6 +74,7 @@ export function usePlayerStatsBySeason(
       let fours = 0;
       let sixes = 0;
       let timesOut = 0;
+      let runOutsAsBatter = 0;
       let thirties = 0;
       let fifties = 0;
       let hundreds = 0;
@@ -84,6 +85,7 @@ export function usePlayerStatsBySeason(
         fours += input.fours || 0;
         sixes += input.sixes || 0;
         if (input.out) timesOut += 1;
+        if ((input as any).dismissal_type === 'run_out') runOutsAsBatter += 1;
         
         const runs = input.runs || 0;
         if (runs >= 100) hundreds += 1;
@@ -164,6 +166,7 @@ export function usePlayerStatsBySeason(
         runouts,
         stumpings,
         dropped_catches: droppedCatches,
+        run_outs_as_batter: runOutsAsBatter,
       };
 
       setStats(aggregatedStats);
