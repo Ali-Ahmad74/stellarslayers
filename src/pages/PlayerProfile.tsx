@@ -391,6 +391,7 @@ const PlayerProfile = () => {
                       { value: stats?.sixes || 0, label: 'Sixes' },
                       { value: stats?.times_out || 0, label: 'Dismissals' },
                       { value: stats ? (stats.matches - stats.times_out) : 0, label: 'Not Outs' },
+                      { value: stats?.run_outs_as_batter || 0, label: 'Run Outs' },
                     ].map((item) => (
                       <div key={item.label} className="text-center p-3 bg-muted/50 rounded-xl">
                         <p className="text-xl sm:text-2xl font-bold font-display text-primary leading-tight">{item.value}</p>

@@ -13,6 +13,7 @@ export interface BattingScorecardRow {
   fours: number;
   sixes: number;
   out: boolean;
+  dismissal_type: string | null;
 }
 
 export interface BowlingScorecardRow {
@@ -56,7 +57,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
         const [batRes, bowlRes, fieldRes] = await Promise.all([
           supabase
             .from("batting_inputs")
-            .select("player_id, runs, balls, fours, sixes, out, players(name)")
+            .select("player_id, runs, balls, fours, sixes, out, dismissal_type, players(name)")
             .eq("match_id", matchId)
             .order("runs", { ascending: false }),
           supabase
@@ -82,6 +83,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
           fours: Number(b.fours ?? 0),
           sixes: Number(b.sixes ?? 0),
           out: Boolean(b.out),
+          dismissal_type: b.dismissal_type || null,
         }));
 
         const bowlingRows: BowlingScorecardRow[] = (bowlRes.data ?? []).map((b: any) => ({
@@ -177,7 +179,13 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
                     <TableCell className="text-center">{b.sixes}</TableCell>
                     <TableCell className="text-center">{b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : "0.0"}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={b.out ? "destructive" : "secondary"}>{b.out ? "Out" : "Not Out"}</Badge>
+                      {b.out ? (
+                        <Badge variant="destructive">
+                          {b.dismissal_type ? b.dismissal_type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Out'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Not Out</Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

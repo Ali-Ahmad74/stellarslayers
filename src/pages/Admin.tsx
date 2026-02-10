@@ -564,6 +564,7 @@ const Admin = () => {
               fours: data.batting.fours,
               sixes: data.batting.sixes,
               out: data.batting.out,
+              dismissal_type: data.batting.dismissal_type ?? null,
             })
             .eq('id', existing.id);
           if (error) errors.push('batting: ' + error.message);
@@ -578,6 +579,7 @@ const Admin = () => {
               fours: data.batting.fours,
               sixes: data.batting.sixes,
               out: data.batting.out,
+              dismissal_type: data.batting.dismissal_type ?? null,
             });
           if (error) errors.push('batting: ' + error.message);
         }

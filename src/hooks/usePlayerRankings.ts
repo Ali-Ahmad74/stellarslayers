@@ -28,6 +28,7 @@ export interface PlayerStats {
   runouts: number;
   stumpings: number;
   dropped_catches: number;
+  run_outs_as_batter?: number;
 }
 
 export interface ICCPoints {

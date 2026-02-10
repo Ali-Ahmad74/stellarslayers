@@ -47,6 +47,7 @@ const rowSchema = z.object({
       fours: int0,
       sixes: int0,
       out: z.boolean(),
+      dismissal_type: z.string().nullable().optional(),
     })
     .optional(),
   bowling: z
@@ -82,11 +83,12 @@ function toInt(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type BattingStatus = "dnb" | "not_out" | "out" | "run_out";
+type BattingStatus = "dnb" | "not_out" | "out";
+type DismissalType = "caught" | "bowled" | "run_out" | "stumped" | "lbw" | "hit_wicket" | "retired" | "other";
 
 type DraftRow = {
   include: boolean;
-  batting: { runs: string; balls: string; fours: string; sixes: string; status: BattingStatus };
+  batting: { runs: string; balls: string; fours: string; sixes: string; status: BattingStatus; dismissal_type: DismissalType | null };
   bowling: {
     balls: string;
     runs_conceded: string;
@@ -104,7 +106,7 @@ type DraftRow = {
 function emptyDraftRow(): DraftRow {
   return {
     include: false,
-    batting: { runs: "0", balls: "0", fours: "0", sixes: "0", status: "dnb" },
+    batting: { runs: "0", balls: "0", fours: "0", sixes: "0", status: "dnb", dismissal_type: null },
     bowling: {
       balls: "0",
       runs_conceded: "0",
@@ -451,7 +453,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
       balls += toInt(r.batting.balls);
       fours += toInt(r.batting.fours);
       sixes += toInt(r.batting.sixes);
-      if (r.batting.status === "out" || r.batting.status === "run_out") outs += 1;
+      if (r.batting.status === "out") outs += 1;
 
       wickets += toInt(r.bowling.wickets);
       wides += toInt(r.bowling.wides);
@@ -632,7 +634,8 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
             balls: toInt(r.batting.balls),
             fours: toInt(r.batting.fours),
             sixes: toInt(r.batting.sixes),
-            out: r.batting.status === "out" || r.batting.status === "run_out",
+            out: r.batting.status === "out",
+            dismissal_type: r.batting.status === "out" ? (r.batting.dismissal_type || null) : null,
           },
           bowling: {
             balls: toInt(r.bowling.balls),
@@ -1196,7 +1199,7 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                     onValueChange={(value: BattingStatus) =>
                       setRows((prev) => ({
                         ...prev,
-                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, status: value } },
+                        [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, status: value, dismissal_type: value === "out" ? prev[p.id].batting.dismissal_type : null } },
                       }))
                     }
                   >
@@ -1207,9 +1210,33 @@ export function MatchEntryGrid({ players, matches }: { players: Player[]; matche
                       <SelectItem value="dnb">DNB</SelectItem>
                       <SelectItem value="not_out">Not Out</SelectItem>
                       <SelectItem value="out">Out</SelectItem>
-                      <SelectItem value="run_out">Run Out</SelectItem>
                     </SelectContent>
                   </Select>
+                  {r.batting.status === "out" && (
+                    <Select
+                      value={r.batting.dismissal_type || ""}
+                      onValueChange={(value: DismissalType) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [p.id]: { ...prev[p.id], batting: { ...prev[p.id].batting, dismissal_type: value } },
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="How out?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="caught">Caught</SelectItem>
+                        <SelectItem value="bowled">Bowled</SelectItem>
+                        <SelectItem value="run_out">Run Out</SelectItem>
+                        <SelectItem value="stumped">Stumped</SelectItem>
+                        <SelectItem value="lbw">LBW</SelectItem>
+                        <SelectItem value="hit_wicket">Hit Wicket</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
 
                   {/* Bowling */}
                   {(

@@ -149,6 +149,7 @@ export type Database = {
         Row: {
           balls: number
           created_at: string
+          dismissal_type: string | null
           fours: number
           id: number
           match_id: number
@@ -161,6 +162,7 @@ export type Database = {
         Insert: {
           balls?: number
           created_at?: string
+          dismissal_type?: string | null
           fours?: number
           id?: number
           match_id: number
@@ -173,6 +175,7 @@ export type Database = {
         Update: {
           balls?: number
           created_at?: string
+          dismissal_type?: string | null
           fours?: number
           id?: number
           match_id?: number
