@@ -319,7 +319,7 @@ const PlayerProfile = () => {
               <span className="ml-2 text-white/70">Loading stats...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { icon: '🏏', label: 'Batting', value: iccPoints.battingPoints, color: 'bg-emerald-500/20' },
                 { icon: '🎯', label: 'Bowling', value: iccPoints.bowlingPoints, color: 'bg-red-500/20' },
@@ -331,11 +331,11 @@ const PlayerProfile = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 * index }}
-                  className={`${item.color} backdrop-blur-sm rounded-xl p-4 text-center`}
+                  className={`${item.color} backdrop-blur-sm rounded-xl p-3 sm:p-4 text-center`}
                 >
-                  <span className="text-2xl mb-2 block">{item.icon}</span>
-                  <p className="text-3xl font-bold font-display">{item.value}</p>
-                  <p className="text-sm text-white/70">{item.label} Points</p>
+                  <span className="text-xl sm:text-2xl mb-1 block">{item.icon}</span>
+                  <p className="text-2xl sm:text-3xl font-bold font-display">{item.value}</p>
+                  <p className="text-xs sm:text-sm text-white/70">{item.label} Points</p>
                 </motion.div>
               ))}
             </div>
@@ -380,63 +380,39 @@ const PlayerProfile = () => {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                    <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.total_runs || 0}</p>
-                      <p className="text-sm text-muted-foreground">Runs</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.total_balls || 0}</p>
-                      <p className="text-sm text-muted-foreground">Balls Faced</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{strikeRate}</p>
-                      <p className="text-sm text-muted-foreground">Strike Rate</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{battingAverage}</p>
-                      <p className="text-sm text-muted-foreground">Average</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.fours || 0}</p>
-                      <p className="text-sm text-muted-foreground">Fours</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.sixes || 0}</p>
-                      <p className="text-sm text-muted-foreground">Sixes</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.times_out || 0}</p>
-                      <p className="text-sm text-muted-foreground">Dismissals</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-emerald-600 dark:text-emerald-400">
-                        {stats ? (stats.matches - stats.times_out) : 0}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Not Outs</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-amber-600 dark:text-amber-400">{stats?.runouts || 0}</p>
-                      <p className="text-sm text-muted-foreground">Run Outs</p>
-                    </div>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: stats?.total_runs || 0, label: 'Runs' },
+                      { value: stats?.total_balls || 0, label: 'Balls' },
+                      { value: strikeRate, label: 'SR' },
+                      { value: battingAverage, label: 'Average' },
+                      { value: stats?.fours || 0, label: 'Fours' },
+                      { value: stats?.sixes || 0, label: 'Sixes' },
+                      { value: stats?.times_out || 0, label: 'Dismissals' },
+                      { value: stats ? (stats.matches - stats.times_out) : 0, label: 'Not Outs' },
+                      { value: stats?.runouts || 0, label: 'Run Outs' },
+                    ].map((item) => (
+                      <div key={item.label} className="text-center p-3 bg-muted/50 rounded-xl">
+                        <p className="text-xl sm:text-2xl font-bold font-display text-primary leading-tight">{item.value}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-tight">{item.label}</p>
+                      </div>
+                    ))}
                   </div>
                   {/* Milestones */}
                   <div className="mt-4 pt-4 border-t">
                     <h4 className="text-sm font-semibold text-muted-foreground mb-3">Milestones</h4>
-                    <div className="flex gap-4">
-                      <div className="text-center flex-1 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats?.thirties || 0}</p>
-                        <p className="text-xs text-muted-foreground">30s</p>
-                      </div>
-                      <div className="text-center flex-1 p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats?.fifties || 0}</p>
-                        <p className="text-xs text-muted-foreground">50s</p>
-                      </div>
-                      <div className="text-center flex-1 p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                        <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats?.hundreds || 0}</p>
-                        <p className="text-xs text-muted-foreground">100s</p>
-                      </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: stats?.thirties || 0, label: '30s', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
+                        { value: stats?.fifties || 0, label: '50s', bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400' },
+                        { value: stats?.hundreds || 0, label: '100s', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' },
+                      ].map((item) => (
+                        <div key={item.label} className={`text-center p-3 ${item.bg} rounded-lg`}>
+                          <p className={`text-lg font-bold ${item.text}`}>{item.value}</p>
+                          <p className="text-xs text-muted-foreground">{item.label}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
@@ -461,57 +437,38 @@ const PlayerProfile = () => {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.wickets || 0}</p>
-                      <p className="text-sm text-muted-foreground">Wickets</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{bowlingAverage}</p>
-                      <p className="text-sm text-muted-foreground">Average</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{economy}</p>
-                      <p className="text-sm text-muted-foreground">Economy</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.runs_conceded || 0}</p>
-                      <p className="text-sm text-muted-foreground">Runs Conceded</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.maidens || 0}</p>
-                      <p className="text-sm text-muted-foreground">Maidens</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.wides || 0}/{stats?.no_balls || 0}</p>
-                      <p className="text-sm text-muted-foreground">Wd/Nb</p>
-                    </div>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: stats?.wickets || 0, label: 'Wickets' },
+                      { value: bowlingAverage, label: 'Average' },
+                      { value: economy, label: 'Economy' },
+                      { value: stats?.runs_conceded || 0, label: 'Runs Given' },
+                      { value: stats?.maidens || 0, label: 'Maidens' },
+                      { value: `${stats?.wides || 0}/${stats?.no_balls || 0}`, label: 'Wd/Nb' },
+                    ].map((item) => (
+                      <div key={item.label} className="text-center p-3 bg-muted/50 rounded-xl">
+                        <p className="text-xl sm:text-2xl font-bold font-display text-primary leading-tight">{item.value}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-tight">{item.label}</p>
+                      </div>
+                    ))}
                   </div>
                   {/* Bowling extras */}
                   <div className="mt-4 pt-4 border-t">
                     <h4 className="text-sm font-semibold text-muted-foreground mb-3">Additional Stats</h4>
-                    <div className="grid grid-cols-5 gap-3">
-                      <div className="text-center p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{stats?.dot_balls || 0}</p>
-                        <p className="text-xs text-muted-foreground">Dot Balls</p>
-                      </div>
-                      <div className="text-center p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                        <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats?.three_fers || 0}</p>
-                        <p className="text-xs text-muted-foreground">3-fers</p>
-                      </div>
-                      <div className="text-center p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{stats?.five_fers || 0}</p>
-                        <p className="text-xs text-muted-foreground">5-fers</p>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <p className="text-lg font-bold">{stats?.fours_conceded || 0}</p>
-                        <p className="text-xs text-muted-foreground">4s Given</p>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <p className="text-lg font-bold">{stats?.sixes_conceded || 0}</p>
-                        <p className="text-xs text-muted-foreground">6s Given</p>
-                      </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[
+                        { value: stats?.dot_balls || 0, label: 'Dots', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' },
+                        { value: stats?.three_fers || 0, label: '3-fers', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' },
+                        { value: stats?.five_fers || 0, label: '5-fers', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' },
+                        { value: stats?.fours_conceded || 0, label: '4s', bg: 'bg-muted', text: '' },
+                        { value: stats?.sixes_conceded || 0, label: '6s', bg: 'bg-muted', text: '' },
+                      ].map((item) => (
+                        <div key={item.label} className={`text-center p-2 ${item.bg} rounded-lg`}>
+                          <p className={`text-base sm:text-lg font-bold leading-tight ${item.text}`}>{item.value}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">{item.label}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
@@ -537,24 +494,19 @@ const PlayerProfile = () => {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.catches || 0}</p>
-                      <p className="text-sm text-muted-foreground">Catches</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.runouts || 0}</p>
-                      <p className="text-sm text-muted-foreground">Run Outs</p>
-                    </div>
-                    <div className="text-center p-4 bg-muted/50 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-primary">{stats?.stumpings || 0}</p>
-                      <p className="text-sm text-muted-foreground">Stumpings</p>
-                    </div>
-                    <div className="text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-xl">
-                      <p className="text-3xl font-bold font-display text-red-600 dark:text-red-400">{stats?.dropped_catches || 0}</p>
-                      <p className="text-sm text-muted-foreground">Dropped</p>
-                    </div>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { value: stats?.catches || 0, label: 'Catches', color: '' },
+                      { value: stats?.runouts || 0, label: 'Run Outs', color: '' },
+                      { value: stats?.stumpings || 0, label: 'Stumpings', color: '' },
+                      { value: stats?.dropped_catches || 0, label: 'Dropped', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30' },
+                    ].map((item) => (
+                      <div key={item.label} className={`text-center p-3 sm:p-4 ${item.bg || 'bg-muted/50'} rounded-xl`}>
+                        <p className={`text-xl sm:text-2xl font-bold font-display leading-tight ${item.color || 'text-primary'}`}>{item.value}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-tight">{item.label}</p>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
