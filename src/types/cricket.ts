@@ -101,6 +101,7 @@ export interface RankingPlayer {
   id: number;
   name: string;
   role: PlayerRole;
+  photo_url?: string | null;
   rating: number;
   matches?: number;
   runs?: number;

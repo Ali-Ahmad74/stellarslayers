@@ -110,7 +110,7 @@ export function RankingsTable({ title, icon, category, players }: RankingsTableP
                           state={{ from: '/', fromLabel: 'Back to Rankings' }}
                           className="flex items-center gap-3 hover:text-primary transition-colors"
                         >
-                          <PlayerAvatar name={player.name} size="sm" />
+                          <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                           <div>
                             <p className="font-semibold">{player.name}</p>
                             <RoleBadge role={player.role} size="sm" />

@@ -16,6 +16,7 @@ interface Player {
   id: number;
   name: string;
   role: PlayerRole;
+  photo_url: string | null;
 }
 
 // Calculate fielding points for a player's stats
@@ -45,7 +46,7 @@ export function useFieldingRankingsBySeason(seasonId: string | null) {
       // Fetch all players
       const { data: playersData, error: playersError } = await supabase
         .from('players')
-        .select('id, name, role');
+        .select('id, name, role, photo_url');
 
       if (playersError) throw playersError;
 
@@ -121,6 +122,7 @@ export function useFieldingRankingsBySeason(seasonId: string | null) {
           id: player.id,
           name: player.name,
           role: player.role,
+          photo_url: player.photo_url,
           rating: calculateFieldingPoints(stats, scoringSettings),
           matches: stats.matches,
           catches: stats.catches,
