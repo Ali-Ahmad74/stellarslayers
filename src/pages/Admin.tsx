@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleBadge } from '@/components/RoleBadge';
+import { PlayerAvatar } from '@/components/PlayerAvatar';
 import { PlayerDialog, PlayerFormData } from '@/components/dialogs/PlayerDialog';
 import { MatchDialog, MatchFormData } from '@/components/dialogs/MatchDialog';
 import { PerformanceDialog, PerformanceFormData } from '@/components/dialogs/PerformanceDialog';
@@ -995,7 +996,12 @@ const Admin = () => {
                           {players.map((player) => (
                             <TableRow key={player.id} className="hover:bg-muted/30">
                               <TableCell className="font-mono text-xs">{player.id}</TableCell>
-                              <TableCell className="font-semibold">{player.name}</TableCell>
+                              <TableCell className="font-semibold">
+                                <div className="flex items-center gap-2">
+                                  <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
+                                  {player.name}
+                                </div>
+                              </TableCell>
                               <TableCell><RoleBadge role={player.role as PlayerRole} size="sm" /></TableCell>
                               <TableCell className="text-muted-foreground">{player.batting_style || '-'}</TableCell>
                               <TableCell className="text-muted-foreground">{player.bowling_style || '-'}</TableCell>

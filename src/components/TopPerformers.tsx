@@ -56,7 +56,7 @@ export function TopPerformers({
                     <RankBadge rank={player.rank} size="sm" />
                     <PlayerAvatar 
                       name={player.name} 
-                      photoUrl={(player as any).photo_url}
+                      photoUrl={player.photo_url}
                       size="sm" 
                     />
                     <div className="min-w-0">

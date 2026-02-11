@@ -548,7 +548,7 @@ const Leaderboard = () => {
                             </TableCell>
                             <TableCell>
                               <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
-                                <PlayerAvatar name={player.name} size="sm" />
+                                <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
                             </TableCell>
@@ -579,7 +579,7 @@ const Leaderboard = () => {
                             </TableCell>
                             <TableCell>
                               <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
-                                <PlayerAvatar name={player.name} size="sm" />
+                                <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
                             </TableCell>
@@ -609,7 +609,7 @@ const Leaderboard = () => {
                             </TableCell>
                             <TableCell>
                               <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors">
-                                <PlayerAvatar name={player.name} size="sm" />
+                                <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
                             </TableCell>
@@ -641,7 +641,7 @@ const Leaderboard = () => {
                             </TableCell>
                             <TableCell>
                               <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
-                                <PlayerAvatar name={player.name} size="sm" />
+                                <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
                             </TableCell>
@@ -671,7 +671,7 @@ const Leaderboard = () => {
                             </TableCell>
                             <TableCell>
                               <Link to={`/player/${player.id}`} state={{ from: '/leaderboard', fromLabel: 'Back to Leaderboard' }} className="flex items-center gap-3 hover:text-primary transition-colors" onClick={(e) => e.stopPropagation()}>
-                                <PlayerAvatar name={player.name} size="sm" />
+                                <PlayerAvatar name={player.name} photoUrl={player.photo_url} size="sm" />
                                 <span className="font-semibold">{player.name}</span>
                               </Link>
                             </TableCell>

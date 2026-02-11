@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 export interface BattingScorecardRow {
   player_id: number;
   player_name: string;
+  player_photo_url: string | null;
   runs: number;
   balls: number;
   fours: number;
@@ -19,6 +21,7 @@ export interface BattingScorecardRow {
 export interface BowlingScorecardRow {
   player_id: number;
   player_name: string;
+  player_photo_url: string | null;
   balls: number;
   runs_conceded: number;
   wickets: number;
@@ -30,6 +33,7 @@ export interface BowlingScorecardRow {
 export interface FieldingScorecardRow {
   player_id: number;
   player_name: string;
+  player_photo_url: string | null;
   catches: number;
   runouts: number;
   stumpings: number;
@@ -57,17 +61,17 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
         const [batRes, bowlRes, fieldRes] = await Promise.all([
           supabase
             .from("batting_inputs")
-            .select("player_id, runs, balls, fours, sixes, out, dismissal_type, players(name)")
+            .select("player_id, runs, balls, fours, sixes, out, dismissal_type, players(name, photo_url)")
             .eq("match_id", matchId)
             .order("runs", { ascending: false }),
           supabase
             .from("bowling_inputs")
-            .select("player_id, balls, runs_conceded, wickets, maidens, wides, no_balls, players(name)")
+            .select("player_id, balls, runs_conceded, wickets, maidens, wides, no_balls, players(name, photo_url)")
             .eq("match_id", matchId)
             .order("wickets", { ascending: false }),
           supabase
             .from("fielding_inputs")
-            .select("player_id, catches, runouts, stumpings, players(name)")
+            .select("player_id, catches, runouts, stumpings, players(name, photo_url)")
             .eq("match_id", matchId),
         ]);
 
@@ -78,6 +82,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
         const battingRows: BattingScorecardRow[] = (batRes.data ?? []).map((b: any) => ({
           player_id: b.player_id,
           player_name: b.players?.name || "Unknown",
+          player_photo_url: b.players?.photo_url || null,
           runs: Number(b.runs ?? 0),
           balls: Number(b.balls ?? 0),
           fours: Number(b.fours ?? 0),
@@ -89,6 +94,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
         const bowlingRows: BowlingScorecardRow[] = (bowlRes.data ?? []).map((b: any) => ({
           player_id: b.player_id,
           player_name: b.players?.name || "Unknown",
+          player_photo_url: b.players?.photo_url || null,
           balls: Number(b.balls ?? 0),
           runs_conceded: Number(b.runs_conceded ?? 0),
           wickets: Number(b.wickets ?? 0),
@@ -105,6 +111,7 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
           .map((f: any) => ({
             player_id: f.player_id,
             player_name: f.players?.name || "Unknown",
+            player_photo_url: f.players?.photo_url || null,
             catches: Number(f.catches ?? 0),
             runouts: Number(f.runouts ?? 0),
             stumpings: Number(f.stumpings ?? 0),
@@ -172,7 +179,12 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
               <TableBody>
                 {actualBatters.map((b) => (
                   <TableRow key={b.player_id}>
-                    <TableCell className="font-medium">{b.player_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <PlayerAvatar name={b.player_name} photoUrl={b.player_photo_url} size="sm" />
+                        {b.player_name}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center font-bold">{b.runs}</TableCell>
                     <TableCell className="text-center">{b.balls}</TableCell>
                     <TableCell className="text-center">{b.fours}</TableCell>
@@ -222,7 +234,12 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
               <TableBody>
                 {bowling.map((b) => (
                   <TableRow key={b.player_id}>
-                    <TableCell className="font-medium">{b.player_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <PlayerAvatar name={b.player_name} photoUrl={b.player_photo_url} size="sm" />
+                        {b.player_name}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center">{formatOvers(b.balls)}</TableCell>
                     <TableCell className="text-center">{b.maidens}</TableCell>
                     <TableCell className="text-center">{b.runs_conceded}</TableCell>
@@ -244,7 +261,8 @@ export function MatchScorecard({ matchId }: { matchId: number }) {
           <h4 className="font-semibold mb-3 flex items-center gap-2">🧤 Fielding Highlights</h4>
           <div className="flex flex-wrap gap-2">
             {fielding.map((f) => (
-              <Badge key={f.player_id} variant="outline" className="py-2 px-3">
+              <Badge key={f.player_id} variant="outline" className="py-2 px-3 flex items-center gap-1.5">
+                <PlayerAvatar name={f.player_name} photoUrl={f.player_photo_url} size="sm" />
                 {f.player_name}:{f.catches > 0 && ` ${f.catches}c`}
                 {f.runouts > 0 && ` ${f.runouts}ro`}
                 {f.stumpings > 0 && ` ${f.stumpings}st`}
