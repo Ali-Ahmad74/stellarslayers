@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -93,12 +94,29 @@ const Auth = () => {
       return;
     }
 
-    // Step 3: Create team
+    // Step 3: Wait for Supabase session to be fully set
+    // auth.uid() needs to be available before create_team_for_user runs
+    let retries = 0;
+    let sessionReady = false;
+    while (retries < 10) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) { sessionReady = true; break; }
+      await new Promise(res => setTimeout(res, 300));
+      retries++;
+    }
+
+    if (!sessionReady) {
+      setIsSubmitting(false);
+      toast.error('Session timeout. Please sign in manually.');
+      return;
+    }
+
+    // Step 4: Create team
     const { error: teamError } = await createTeam(teamName);
     setIsSubmitting(false);
 
     if (teamError) {
-      toast.error('Account created but team setup failed. Please try again from admin.');
+      toast.error('Account created but team setup failed. Please sign in again.');
     } else {
       toast.success(`Welcome! Your team "${teamName}" is ready 🏏`);
       navigate('/admin');
