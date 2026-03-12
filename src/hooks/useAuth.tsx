@@ -117,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         p_team_name: teamName,
         p_description: description ?? null,
       });
+      // If team already exists (409/duplicate), just fetch existing team
+      if (error && (error.message.includes('already owns a team') || error.code === '23505')) {
+        await fetchTeam();
+        setIsAdmin(true);
+        return { teamId: null, error: null };
+      }
       if (error) throw error;
       await fetchTeam();
       setIsAdmin(true);
