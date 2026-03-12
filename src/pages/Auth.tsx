@@ -111,21 +111,23 @@ const Auth = () => {
       return;
     }
 
-    // Step 4: Create team (409 = team already exists, that is fine)
+    // Step 4: Create team
     const { error: teamError } = await createTeam(teamName);
     setIsSubmitting(false);
 
-    const alreadyExists = teamError && (
-      teamError.message.includes('already owns a team') ||
-      teamError.message.includes('409')
-    );
-
-    if (teamError && !alreadyExists) {
-      toast.error('Team setup failed. Please sign in again.');
-    } else {
-      toast.success(`Welcome! Your team "${teamName}" is ready 🏏`);
-      navigate('/admin');
+    // Any error that is NOT about duplicate team is a real error
+    if (teamError) {
+      const msg = teamError.message ?? '';
+      const isDuplicate = msg.includes('already owns') || msg.includes('duplicate') || msg.includes('23505');
+      if (!isDuplicate) {
+        toast.error('Team setup failed: ' + msg);
+        return;
+      }
     }
+
+    // Success or duplicate (team already created) — navigate to admin
+    toast.success(`Welcome! Your team is ready 🏏`);
+    navigate('/admin');
   };
 
   if (loading) {
