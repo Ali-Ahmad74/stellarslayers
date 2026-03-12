@@ -1,66 +1,115 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-export interface Season {
-  id: number;
-  name: string;
-  year: number;
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
+export interface TeamSettings {
+  team_name: string;
+  team_logo_url: string | null;
+  description: string | null;
+  tagline: string | null;
+  watermark_enabled: boolean;
+  watermark_handle: string | null;
+  watermark_position: string;
 }
 
-export function useSeasons() {
-  const [seasons, setSeasons] = useState<Season[]>([]);
+/**
+ * Fetches the current user's team settings.
+ * In multi-tenant mode each user has their own team.
+ */
+export function useTeamSettings() {
+  const { team, teamLoading } = useAuth();
+  const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSeasons = async () => {
+  const fetchTeamSettings = useCallback(async (teamId?: string) => {
+    const id = teamId ?? team?.id;
+    if (!id) {
+      setTeamSettings(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('seasons')
-        .select('*')
-        .order('year', { ascending: false });
+    const { data, error } = await supabase
+      .from("teams")
+      .select("name, logo_url, description, tagline, watermark_enabled, watermark_handle, watermark_position")
+      .eq("id", id)
+      .maybeSingle();
 
-      if (fetchError) throw fetchError;
-
-      setSeasons(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch seasons');
-    } finally {
+    if (error) {
+      setError(error.message);
+      setTeamSettings(null);
       setLoading(false);
+      return;
     }
-  };
+
+    if (data) {
+      setTeamSettings({
+        team_name: data.name,
+        team_logo_url: data.logo_url,
+        description: data.description,
+        tagline: data.tagline,
+        watermark_enabled: data.watermark_enabled,
+        watermark_handle: data.watermark_handle,
+        watermark_position: data.watermark_position,
+      });
+    } else {
+      setTeamSettings(null);
+    }
+
+    setLoading(false);
+  }, [team?.id]);
 
   useEffect(() => {
-    fetchSeasons();
+    if (!teamLoading) {
+      fetchTeamSettings();
+    }
+  }, [fetchTeamSettings, teamLoading]);
 
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('seasons-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'seasons' }, () => {
-        fetchSeasons();
-      })
-      .subscribe();
+  const updateTeamSettings = useCallback(async (patch: Partial<TeamSettings>) => {
+    if (!team?.id) throw new Error("No team found");
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    const dbPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (patch.team_name !== undefined) dbPatch.name = patch.team_name;
+    if (patch.team_logo_url !== undefined) dbPatch.logo_url = patch.team_logo_url;
+    if (patch.description !== undefined) dbPatch.description = patch.description;
+    if (patch.tagline !== undefined) dbPatch.tagline = patch.tagline;
+    if (patch.watermark_enabled !== undefined) dbPatch.watermark_enabled = patch.watermark_enabled;
+    if (patch.watermark_handle !== undefined) dbPatch.watermark_handle = patch.watermark_handle;
+    if (patch.watermark_position !== undefined) dbPatch.watermark_position = patch.watermark_position;
 
-  // Find the active season
-  const activeSeason = seasons.find(s => s.is_active);
-  const activeSeasonId = activeSeason ? String(activeSeason.id) : null;
+    const { data, error } = await supabase
+      .from("teams")
+      .update(dbPatch)
+      .eq("id", team.id)
+      .select("name, logo_url, description, tagline, watermark_enabled, watermark_handle, watermark_position")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data) {
+      setTeamSettings({
+        team_name: data.name,
+        team_logo_url: data.logo_url,
+        description: data.description,
+        tagline: data.tagline,
+        watermark_enabled: data.watermark_enabled,
+        watermark_handle: data.watermark_handle,
+        watermark_position: data.watermark_position,
+      });
+    }
+
+    return data;
+  }, [team?.id]);
 
   return {
-    seasons,
-    loading,
+    teamSettings,
+    loading: loading || teamLoading,
     error,
-    refetch: fetchSeasons,
-    activeSeason,
-    activeSeasonId,
+    refetch: fetchTeamSettings,
+    updateTeamSettings,
   };
 }
