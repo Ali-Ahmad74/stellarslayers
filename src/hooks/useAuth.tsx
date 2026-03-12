@@ -117,11 +117,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         p_team_name: teamName,
         p_description: description ?? null,
       });
-      // If team already exists (409/duplicate), just fetch existing team
-      if (error && (error.message.includes('already owns a team') || error.code === '23505')) {
-        await fetchTeam();
-        setIsAdmin(true);
-        return { teamId: null, error: null };
+      // If team already exists — fetch existing and return success
+      if (error) {
+        const msg = error.message ?? '';
+        const code = error.code ?? '';
+        if (msg.includes('already owns a team') || code === '23505' || code === 'P0001') {
+          await fetchTeam();
+          setIsAdmin(true);
+          return { teamId: null, error: null };
+        }
       }
       if (error) throw error;
       await fetchTeam();
