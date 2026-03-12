@@ -111,12 +111,17 @@ const Auth = () => {
       return;
     }
 
-    // Step 4: Create team
+    // Step 4: Create team (409 = team already exists, that is fine)
     const { error: teamError } = await createTeam(teamName);
     setIsSubmitting(false);
 
-    if (teamError) {
-      toast.error('Account created but team setup failed. Please sign in again.');
+    const alreadyExists = teamError && (
+      teamError.message.includes('already owns a team') ||
+      teamError.message.includes('409')
+    );
+
+    if (teamError && !alreadyExists) {
+      toast.error('Team setup failed. Please sign in again.');
     } else {
       toast.success(`Welcome! Your team "${teamName}" is ready 🏏`);
       navigate('/admin');
